@@ -1,0 +1,38 @@
+manifestVersion: 1
+name: robonix.robot.mirrorme.bpx.sdk_read_only
+
+# Hardware state-only profile. The wheel path must be supplied by the operator
+# as an absolute host path. Robonix propagates it to the Primitive start script,
+# which verifies the pinned SHA-256 and mounts only that file read-only.
+env:
+  ROS_DOMAIN_ID: "223"
+  BPX_SDK_WHEEL: "${BPX_SDK_WHEEL}"
+
+system:
+  atlas:
+    listen: 127.0.0.1:50051
+
+primitive:
+  - name: mirrorme_bpx_state
+    path: ../primitive-mirrorme-bpx-quadruped-rbnx
+    manifest: package_manifest.sdk-read-only.yaml
+    config:
+      backend: sdk
+      allow_motion: false
+      auto_arm_fake: false
+      robot_ip: 10.21.20.1
+      robot_state_port: 9873
+      state_rate_hz: 50
+      sdk_tcp_local_port: 0
+      sdk_connect_timeout_s: 10.0
+      sdk_poll_period_s: 0.05
+      odom_topic: /odom
+      joint_states_topic: /joint_states
+      odom_frame: odom
+      base_frame: base_link
+      odom_rate_hz: 50.0
+      publish_odom_tf: false
+      state_timeout_s: 0.5
+
+service: []
+skill: []

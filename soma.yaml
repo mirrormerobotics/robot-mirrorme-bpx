@@ -1,0 +1,51 @@
+urdf:
+  path: ./urdf/mirrorme_bpx.urdf
+  root_link: base_link
+  model_name: mirrorme_bpx
+
+robot:
+  id: mirrorme_bpx
+  display_name: "MirrorMe BPX quadruped"
+  family: quadruped
+  root_part: body
+  # Sum of the 17 link masses in the pinned vendor URDF. Overall dimensions
+  # remain intentionally absent until measured. No navigation footprint is
+  # planned because mapping/navigation are outside the BPX product scope.
+  mass_kg: 15.157
+  exports: []
+  components:
+    - id: body
+      type: quadruped_base
+      urdf_link: base_link
+      exports: []
+      components:
+        - id: front_left_leg
+          type: leg
+          urdf_link: fl_hip_link
+          exports: []
+        - id: front_right_leg
+          type: leg
+          urdf_link: fr_hip_link
+          exports: []
+        - id: hind_left_leg
+          type: leg
+          urdf_link: hl_hip_link
+          exports: []
+        - id: hind_right_leg
+          type: leg
+          urdf_link: hr_hip_link
+          exports: []
+
+description:
+  summary: "Pinned vendor body model for a no-motion MirrorMe BPX deployment."
+  can_do:
+    - "Expose the pinned BPX body description through Soma for inspection."
+  cannot_do:
+    - "Command or arm physical robot motion."
+    - "Map, localize, plan paths, avoid obstacles, or navigate autonomously."
+    - "Claim an IMU frame before its physical extrinsic is measured."
+  notes:
+    - "The no-motion manifest launches no Primitive, service, or skill package."
+    - "Deployment base_link is an identity parent of the vendor-defined torso frame."
+    - "JointState index order follows the pinned SDK JointIndex contract; physical angle signs and zero positions still require hardware confirmation."
+    - "Mapping/Nav2/RTAB-Map and lidar/camera navigation integration are explicitly outside the BPX product scope."

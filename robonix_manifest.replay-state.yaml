@@ -1,0 +1,33 @@
+manifestVersion: 1
+name: robonix.robot.mirrorme.bpx.replay_state
+
+# Deterministic, SDK-free data-plane profile. It exercises the production
+# read-only runtime and publication path using a normalized JSONL fixture.
+env:
+  ROS_DOMAIN_ID: "224"
+
+system:
+  atlas:
+    listen: 127.0.0.1:50051
+
+primitive:
+  - name: mirrorme_bpx_replay
+    path: ../primitive-mirrorme-bpx-quadruped-rbnx
+    manifest: package_manifest.state-replay.yaml
+    config:
+      backend: replay
+      replay_path: /pkg/tests/fixtures/replay_nominal.jsonl
+      allow_motion: false
+      auto_arm_fake: false
+      odom_topic: /odom
+      joint_states_topic: /joint_states
+      odom_frame: odom
+      base_frame: base_link
+      odom_rate_hz: 20.0
+      publish_odom_tf: true
+      # The compact fixture advances every 30 s. This is intentionally larger
+      # than a hardware timeout and is valid only for this offline profile.
+      state_timeout_s: 35.0
+
+service: []
+skill: []

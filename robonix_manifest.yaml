@@ -1,0 +1,23 @@
+manifestVersion: 1
+name: robonix.robot.mirrorme.bpx
+
+catalog:
+  name: robonix.robot.mirrorme.bpx
+  version: 0.1.0-dev.1
+  description: Read-only Robonix deployment metadata and body model for the MirrorMe BPX quadruped.
+  license: BSD-3-Clause
+  tags: [robot, deploy, quadruped, mirrorme, bpx, docker, read-only]
+  maintainers:
+    - nonkr <nonkr@hotmail.com>
+
+# Safe default deployment: body model and Robonix discovery only. Hardware and
+# fake/replay providers require an explicitly selected profile.
+system:
+  atlas:
+    listen: 127.0.0.1:50051
+  soma:
+    listen: 127.0.0.1:50091
+
+primitive: []
+service: []
+skill: []

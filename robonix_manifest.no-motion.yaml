@@ -1,0 +1,14 @@
+manifestVersion: 1
+name: robonix.robot.mirrorme.bpx.no_motion
+
+# Model/Soma inspection profile. It intentionally launches no BPX Primitive,
+# opens no vendor SDK session, and exposes no command capability.
+system:
+  atlas:
+    listen: 127.0.0.1:50051
+  soma:
+    listen: 127.0.0.1:50091
+
+primitive: []
+service: []
+skill: []

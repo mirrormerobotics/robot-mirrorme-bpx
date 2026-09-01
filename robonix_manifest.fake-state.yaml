@@ -1,0 +1,31 @@
+manifestVersion: 1
+name: robonix.robot.mirrorme.bpx.fake_state
+
+# Offline development profile. Its only device is the fake BPX Primitive;
+# built-in Atlas/Soma still run. It never loads the vendor SDK and keeps motion
+# disabled and disarmed. The distinct motion-dev package identity prevents this
+# test-only twist capability from becoming part of the release package surface.
+env:
+  ROS_DOMAIN_ID: "222"
+
+system:
+  atlas:
+    listen: 127.0.0.1:50051
+
+primitive:
+  - name: mirrorme_bpx_quadruped
+    path: ../primitive-mirrorme-bpx-quadruped-rbnx
+    manifest: package_manifest.motion-dev.yaml
+    config:
+      backend: fake
+      allow_motion: false
+      auto_arm_fake: false
+      odom_topic: /odom
+      joint_states_topic: /joint_states
+      odom_frame: odom
+      base_frame: base_link
+      odom_rate_hz: 50.0
+      publish_odom_tf: true
+
+service: []
+skill: []
