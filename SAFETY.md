@@ -7,7 +7,7 @@ profile 被批准向真机发送运动命令。
 
 | Profile | 连接真机 | 运动接口 | 用途 |
 | --- | --- | --- | --- |
-| `robonix_manifest.yaml` | 否 | 无 | 安全默认；Atlas + Soma + 本体模型 |
+| `robonix_manifest.yaml` | 是 | 无 | Catalog/预发布默认；固定 tag 的 SDK 只读状态部署 |
 | `robonix_manifest.no-motion.yaml` | 否 | 无 | 显式模型检查 |
 | `robonix_manifest.fake-state.yaml` | 否 | 独立 `motion_dev` 身份；仅 fake，且默认未 arm | 离线控制器和 ROS 数据面测试；不得作为发布依赖 |
 | `robonix_manifest.replay-state.yaml` | 否 | 无 | 录制状态回放、生命周期和 ROS 数据面测试 |
@@ -16,6 +16,9 @@ profile 被批准向真机发送运动命令。
 Primitive 默认、x86 Docker 和 SDK 专用发布清单均只声明 `odom`，不声明
 `twist_in`；SDK runtime 也没有 `apply()`、arm 或运动控制对象。外置 wheel 必须
 通过固定 SHA-256 校验，且只读挂载。
+
+需要完全不连接真机时，必须显式使用 `robonix_manifest.no-motion.yaml`；默认清单
+虽然没有运动接口，但会建立 SDK 状态连接。
 
 ## 真机前禁止事项
 

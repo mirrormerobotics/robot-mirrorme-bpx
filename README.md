@@ -2,16 +2,16 @@
 
 Safety-first Robot Deployment skeleton for the MirrorMe BPX quadruped.
 
-`robonix_manifest.yaml` is the safe default and starts Atlas + Soma only. A
-hardware, fake, or replay Primitive requires choosing its named profile
-explicitly.
+`robonix_manifest.yaml` is the pre-release Catalog/default deployment. It
+starts Atlas + Soma and fetches the odom-only Primitive from immutable tag
+`v0.1.0-dev.1`. The external BPX SDK wheel and reachable hardware are required
+for activation; no actuator command capability is present.
 
 The default manifest contains the complete pre-release Catalog metadata under
 `catalog:` (`robonix.robot.mirrorme.bpx`, version `0.1.0-dev.1`,
-BSD-3-Clause, and the public maintainer contact). It intentionally does not yet
-reference a Primitive: the formal dependency must use the future public
-Primitive repository and an immutable tag, neither of which is fabricated by
-this local development tree.
+BSD-3-Clause, and the public maintainer contact). Its dependency uses the public
+MirrorMe repository plus the matching pre-release tag; local-path profiles are
+retained only for development and replay validation.
 
 The primary profile is deliberately **no-motion**. It starts no hardware
 Primitive and contains no SDK session, velocity command path, or guessed sensor
@@ -115,19 +115,22 @@ bash scripts/test-offline-integration.sh /path/to/fixed/robonix replay
 
 ## SDK read-only profile
 
-`robonix_manifest.sdk-read-only.yaml` starts the BPX Primitive with
-`backend=sdk` and `allow_motion=false`. It selects the Primitive's dedicated
-read-only package manifest, so only `odom` is declared; no `twist_in`
-subscription, motion controller, joint controller, or arm path is created. The
-manifest/backend pairing is enforced at runtime and fails initialization if it
-is misconfigured.
+The default `robonix_manifest.yaml` is the publishable, URL-and-tag-pinned form
+of the read-only deployment. `robonix_manifest.sdk-read-only.yaml` is the local
+workspace equivalent used while developing both sibling repositories. Both
+start the BPX Primitive with `backend=sdk` and `allow_motion=false`. The default
+selects `package_manifest.x86-docker.yaml`; the local profile selects
+`package_manifest.sdk-read-only.yaml`. Both manifests expose the same `odom`-only
+package identity, so no `twist_in` subscription, motion controller, joint
+controller, or arm path is created. The manifest/backend pairing is enforced at
+runtime and fails initialization if it is misconfigured.
 
 The SDK wheel remains an external host artifact. Supply the pinned v1.0.8 wheel
 by absolute path before booting:
 
 ```bash
 export BPX_SDK_WHEEL=/absolute/path/to/bpx_sdk_open-1.0.8-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl
-rbnx boot -f robonix_manifest.sdk-read-only.yaml --no-update-check -v
+rbnx boot -f robonix_manifest.yaml --no-update-check -v
 ```
 
 The Primitive start wrapper verifies SHA-256

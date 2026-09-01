@@ -10,14 +10,41 @@ catalog:
   maintainers:
     - nonkr <nonkr@hotmail.com>
 
-# Safe default deployment: body model and Robonix discovery only. Hardware and
-# fake/replay providers require an explicitly selected profile.
+# Pre-release default deployment: the published Primitive is fetched from its
+# immutable pre-release tag and can expose body-state odometry only. The wheel
+# remains an external host artifact and all actuator control stays unavailable.
+env:
+  ROS_DOMAIN_ID: "223"
+  BPX_SDK_WHEEL: "${BPX_SDK_WHEEL}"
+
 system:
   atlas:
     listen: 127.0.0.1:50051
   soma:
     listen: 127.0.0.1:50091
 
-primitive: []
+primitive:
+  - name: mirrorme_bpx_state
+    url: https://github.com/mirrormerobotics/primitive-mirrorme-bpx-quadruped-rbnx
+    branch: v0.1.0-dev.1
+    manifest: package_manifest.x86-docker.yaml
+    config:
+      backend: sdk
+      allow_motion: false
+      auto_arm_fake: false
+      robot_ip: 10.21.20.1
+      robot_state_port: 9873
+      state_rate_hz: 50
+      sdk_tcp_local_port: 0
+      sdk_connect_timeout_s: 10.0
+      sdk_poll_period_s: 0.05
+      odom_topic: /odom
+      joint_states_topic: /joint_states
+      odom_frame: odom
+      base_frame: base_link
+      odom_rate_hz: 50.0
+      publish_odom_tf: false
+      state_timeout_s: 0.5
+
 service: []
 skill: []

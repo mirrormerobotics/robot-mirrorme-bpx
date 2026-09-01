@@ -18,12 +18,23 @@ class SafeProfilesTest(unittest.TestCase):
         self.assertIn("Hangzhou MirrorMe Technology Co., Ltd.", license_text)
         self.assertIn("License: BSD-3-Clause", readme)
 
-    def test_default_manifest_has_no_primitive_or_motion_path(self) -> None:
+    def test_default_manifest_pins_the_read_only_public_primitive(self) -> None:
         manifest = yaml.safe_load(
             (ROBOT_ROOT / "robonix_manifest.yaml").read_text(encoding="utf-8")
         )
         self.assertEqual("robonix.robot.mirrorme.bpx", manifest["name"])
-        self.assertEqual([], manifest["primitive"])
+        self.assertEqual("${BPX_SDK_WHEEL}", manifest["env"]["BPX_SDK_WHEEL"])
+        self.assertEqual(1, len(manifest["primitive"]))
+        primitive = manifest["primitive"][0]
+        self.assertEqual(
+            "https://github.com/mirrormerobotics/primitive-mirrorme-bpx-quadruped-rbnx",
+            primitive["url"],
+        )
+        self.assertEqual("v0.1.0-dev.1", primitive["branch"])
+        self.assertEqual("package_manifest.x86-docker.yaml", primitive["manifest"])
+        self.assertEqual("sdk", primitive["config"]["backend"])
+        self.assertIs(False, primitive["config"]["allow_motion"])
+        self.assertIs(False, primitive["config"]["publish_odom_tf"])
         self.assertEqual([], manifest["service"])
         self.assertEqual([], manifest["skill"])
         self.assertIn("atlas", manifest["system"])

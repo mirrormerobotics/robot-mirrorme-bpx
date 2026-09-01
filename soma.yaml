@@ -37,7 +37,7 @@ robot:
           exports: []
 
 description:
-  summary: "Pinned vendor body model for a no-motion MirrorMe BPX deployment."
+  summary: "Pinned vendor body model for a read-only MirrorMe BPX deployment."
   can_do:
     - "Expose the pinned BPX body description through Soma for inspection."
   cannot_do:

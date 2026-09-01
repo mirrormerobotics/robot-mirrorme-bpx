@@ -6,7 +6,8 @@
 - [x] Primitive 单元测试覆盖 lifecycle、安全状态机、SDK 只读 adapter、
   telemetry 校验、回放、录制/audit、关节映射和 packaging
 - [x] runtime Docker 镜像仅在容器测试通过后标记为 `:dev`
-- [x] 默认 `robonix_manifest.yaml` 不启动 Primitive 或 SDK session
+- [x] 默认 `robonix_manifest.yaml` 通过公开 URL 和 `v0.1.0-dev.1` 固定只读 Primitive，且不声明运动能力
+- [x] `robonix_manifest.no-motion.yaml` 不启动 Primitive 或 SDK session
 - [x] 默认 Robot manifest 包含完整的 `catalog:` 预发布元数据
 - [x] Primitive 默认/x86 Docker/SDK/replay 发布身份均只声明 `odom`
 - [x] fake Twist 仅存在于独立、非发布且强制 fake backend 的 `motion_dev` 身份
