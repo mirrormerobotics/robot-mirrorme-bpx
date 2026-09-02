@@ -1,6 +1,6 @@
 # Safe offline validation record
 
-Validation date: 2026-09-01
+Validation date: 2026-09-02
 
 ## Fixed inputs
 
@@ -14,6 +14,9 @@ Validation date: 2026-09-01
   `robonix_manifest.replay-state.yaml`
 - Hardware profile booted only for no-hardware fail-closed validation:
   `robonix_manifest.sdk-read-only.yaml`
+- Public default dependency: `mirrormerobotics/primitive-mirrorme-bpx-quadruped-rbnx`
+  tag `v0.1.0-dev.1`, resolved to
+  `0bba6e5f5c1fa0163449fb93a36c94ca6532c381`
 - Product scope: body state and guarded body motion only; mapping,
   localization, and autonomous navigation are explicitly unsupported.
 
@@ -141,6 +144,23 @@ The provider moved from `INACTIVE` to `ERROR` and `TERMINATED` after about the
 configured 10-second wait. Soma failed the deployment instead of accepting a
 state-less provider, Atlas shut down, and no Primitive or tool container
 remained. This proves the bounded failure path, not hardware telemetry.
+
+## Public default dependency verification
+
+The public Robot repository was cloned into a new directory and its default
+`robonix_manifest.yaml` was booted with a fresh Robonix package cache. Robonix
+cloned the Primitive from its public GitHub URL, checked out tag
+`v0.1.0-dev.1` in detached-HEAD state at
+`0bba6e5f5c1fa0163449fb93a36c94ca6532c381`, ran code generation and built the
+Docker image from that checkout.
+
+Soma reported only `robonix/primitive/quadruped/odom`. The provider registered,
+reached `INACTIVE`, then failed activation after the bounded 10-second wait
+because `10.21.20.1` produced no odometry frame. Atlas recorded
+`INACTIVE -> ERROR -> TERMINATED`, the deployment failed closed, Atlas and Soma
+shut down, and no labeled Primitive container remained. This validates the
+public URL/tag dependency and failure path; it is not evidence of hardware
+telemetry.
 
 ## Normalized replay integration verification
 

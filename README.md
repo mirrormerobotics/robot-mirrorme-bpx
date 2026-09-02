@@ -143,8 +143,11 @@ odometry frame and fails closed otherwise.
 The packaging and SDK import path have been validated without a robot. With the
 default IP unreachable, a full boot declared only `odom`, timed out after the
 configured 10 seconds, transitioned through `ERROR` to `TERMINATED`, and left
-no container behind. The profile has not yet produced telemetry from BPX
-hardware; that step requires a safe test area, confirmed robot IP/firmware, and
+no container behind. The same check was repeated from a fresh public Robot clone
+and fresh Robonix package cache: the default URL/tag dependency resolved
+`v0.1.0-dev.1` to Primitive commit `0bba6e5` before following the same
+fail-closed path. The profile has not yet produced telemetry from BPX hardware;
+that step requires a safe test area, confirmed robot IP/firmware, and
 hardware-team approval.
 
 The next model milestone is limited to measured body dimensions and, if the IMU
