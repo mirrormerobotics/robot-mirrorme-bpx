@@ -1,4 +1,5 @@
 rbnx-boot/
 logs/
+robonix_manifest.*.local.yaml
 *.pyc
 __pycache__/

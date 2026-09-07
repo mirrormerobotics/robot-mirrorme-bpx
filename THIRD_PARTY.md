@@ -17,7 +17,9 @@
 
 ## BPX SDK
 
-- Contract baseline: `mirrormerobotics/bpx_sdk_open@19cb373a8d2f8e19eaab6a1441167f3287cc95dd`
+- Contract baseline: `mirrormerobotics/bpx_sdk_open@cab478a5fd3dfce087e0774534bb87b51a3d69e1`
+- Release artifact: `v1.0.8` cp310 x86_64 wheel, expected SHA-256
+  `23dec27cd4c90cfe5531fbccf5db15e44c5ec4d4b6d2a76941e61def957db115`
 - License: Apache-2.0
 - The x86_64 wheel is not stored in this workspace or runtime image. It is
   supplied externally, checksum-verified, and mounted read-only.

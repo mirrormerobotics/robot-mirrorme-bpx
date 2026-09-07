@@ -37,11 +37,12 @@ robot:
           exports: []
 
 description:
-  summary: "Pinned vendor body model for a read-only MirrorMe BPX deployment."
+  summary: "Pinned vendor body model for a MirrorMe BPX odometry and posture deployment."
   can_do:
     - "Expose the pinned BPX body description through Soma for inspection."
+    - "Publish body odometry and accept explicit stand/sit posture requests."
   cannot_do:
-    - "Command or arm physical robot motion."
+    - "Accept continuous velocity, gait, damping, or joint-level commands."
     - "Map, localize, plan paths, avoid obstacles, or navigate autonomously."
     - "Claim an IMU frame before its physical extrinsic is measured."
   notes:

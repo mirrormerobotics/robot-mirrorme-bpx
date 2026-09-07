@@ -1,6 +1,14 @@
-# Safe offline validation record
+# Safe offline and read-only hardware validation record
 
-Validation date: 2026-09-02
+Validation date: 2026-09-04
+
+This document preserves the dev.1 validation baseline below. The dev.2 release
+candidate advances the SDK contract to
+`cab478a5fd3dfce087e0774534bb87b51a3d69e1`, uses cp310 x86_64 wheel SHA-256
+`23dec27cd4c90cfe5531fbccf5db15e44c5ec4d4b6d2a76941e61def957db115`, and
+adds only the hardware-validated `stand`/`sit` posture RPC beside odom. The
+historical hashes and results remain unchanged rather than being attributed to
+an artifact that was not used in those runs.
 
 ## Fixed inputs
 
@@ -12,7 +20,7 @@ Validation date: 2026-09-02
   `robonix_manifest.fake-state.yaml`
 - Automated read-only data-plane profile:
   `robonix_manifest.replay-state.yaml`
-- Hardware profile booted only for no-hardware fail-closed validation:
+- Hardware profile used for both no-hardware fail-closed and bounded BPX validation:
   `robonix_manifest.sdk-read-only.yaml`
 - Public default dependency: `mirrormerobotics/primitive-mirrorme-bpx-quadruped-rbnx`
   tag `v0.1.0-dev.1`, resolved to
@@ -116,10 +124,12 @@ shutdown.
 
 ## SDK read-only packaging verification
 
-The Primitive suite passed 62 tests, including the unified runtime seam,
-strict `backend=sdk` configuration, stale/cached frame suppression, the common
-odom-only surface of every release manifest, and isolation of fake Twist under
-the separate `motion_dev` identity. The runtime image then installed the
+The dev.1 Primitive suite passed 102 tests, including the unified runtime seam,
+strict `backend=sdk` configuration, stale/cached frame suppression, the then
+common odom-only surface of every release manifest, and isolation of fake Twist under
+the separate `motion_dev` identity. This count also includes the isolated
+stand/hold/sit state machine and narrow MotionLevelControl API checks; those are
+offline tests, not a physical posture result. The runtime image then installed the
 externally supplied wheel from a read-only bind mount
 using `--no-index --no-deps` and reported:
 
@@ -129,7 +139,7 @@ bpx_sdk 1.0.8 runtime ReadOnlyRuntime supports_twist False
 
 The mounted wheel matched the pinned SHA-256. It was not copied into the source
 repository or Docker image. No robot connection or motion API was used for this
-verification.
+packaging-only phase.
 
 The complete SDK read-only deployment was also booted while `10.21.20.1` was
 unreachable. Before activation, both the selected package manifest and live
@@ -145,7 +155,27 @@ configured 10-second wait. Soma failed the deployment instead of accepting a
 state-less provider, Atlas shut down, and no Primitive or tool container
 remained. This proves the bounded failure path, not hardware telemetry.
 
-## Public default dependency verification
+## BPX hardware read-only verification
+
+The SDK-only probe and complete Robonix deployment were then tested against a
+BPX at temporary WLAN address `192.168.1.237`. The probe received the first
+odometry frame in 0.064--0.120 seconds and recorded 30 seconds of connected
+leg odometry, IMU, 12-joint, temperature, motion-state, and battery data with
+no disconnect or timestamp regression.
+
+The integrated deployment reached ACTIVE with only
+`robonix/primitive/quadruped/odom` plus the shared Driver declared for the BPX
+provider. Live `/odom` and `/joint_states` samples were consumed, Driver
+DEACTIVATE/ACTIVATE restored telemetry, and `rbnx shutdown` transitioned the
+provider to TERMINATED without leaving a child container. Docker Desktop
+required bridge networking and explicit UDP 9873 publication; native Linux
+host networking remains a separate release-host check.
+
+See [HARDWARE_VALIDATION.md](HARDWARE_VALIDATION.md) for measured per-field
+rates, platform/network details, timestamp caveats, and the remaining physical
+acceptance items.
+
+## Historical dev.1 public default dependency verification
 
 The public Robot repository was cloned into a new directory and its default
 `robonix_manifest.yaml` was booted with a fresh Robonix package cache. Robonix
@@ -189,8 +219,14 @@ disconnect count and telemetry-field coverage.
 
 - RViz visual/collision rendering;
 - physical body dimensions;
-- hardware confirmation of joint angle signs/zero positions and torque units;
-- boot and bounded telemetry capture of the SDK read-only profile on BPX
-  hardware;
+- hardware confirmation of odometry axes, joint angle signs/zero positions and
+  torque units;
 - IMU, lidar, and camera frames/extrinsics;
+- long-duration, cable-loss, robot-reboot, and native Ubuntu 22.04 host tests;
 - the chassis-test and full-motion deployment profiles.
+
+The isolated yaw-circle probe has offline/fake-clock coverage for the vendor
+C++ example's core command order, positive/negative commanded directions,
+opposite-direction rejection, interruption cleanup, translation and timeout
+gates, but has not been run on physical hardware. See
+`YAW_CIRCLE_TEST_GUIDE.md`.

@@ -3,17 +3,18 @@
 Safety-first Robot Deployment skeleton for the MirrorMe BPX quadruped.
 
 `robonix_manifest.yaml` is the pre-release Catalog/default deployment. It
-starts Atlas + Soma and fetches the odom-only Primitive from immutable tag
-`v0.1.0-dev.1`. The external BPX SDK wheel and reachable hardware are required
-for activation; no actuator command capability is present.
+starts Atlas + Soma and fetches the odom + posture Primitive from immutable tag
+`v0.1.0-dev.2`. The external BPX SDK wheel and reachable hardware are required
+for activation. Startup sends no posture command; only explicit `stand` and
+`sit` RPCs can move the robot.
 
 The default manifest contains the complete pre-release Catalog metadata under
-`catalog:` (`robonix.robot.mirrorme.bpx`, version `0.1.0-dev.1`,
+`catalog:` (`robonix.robot.mirrorme.bpx`, version `0.1.0-dev.2`,
 BSD-3-Clause, and the public maintainer contact). Its dependency uses the public
 MirrorMe repository plus the matching pre-release tag; local-path profiles are
 retained only for development and replay validation.
 
-The primary profile is deliberately **no-motion**. It starts no hardware
+The separate no-motion profile starts no hardware
 Primitive and contains no SDK session, velocity command path, or guessed sensor
 extrinsics. Its purpose is to make the vendor body model
 auditable and available to Soma before hardware control is introduced.
@@ -113,42 +114,94 @@ uniqueness, and verifies no Primitive container remains:
 bash scripts/test-offline-integration.sh /path/to/fixed/robonix replay
 ```
 
-## SDK read-only profile
+## SDK release and read-only profiles
 
-The default `robonix_manifest.yaml` is the publishable, URL-and-tag-pinned form
-of the read-only deployment. `robonix_manifest.sdk-read-only.yaml` is the local
-workspace equivalent used while developing both sibling repositories. Both
-start the BPX Primitive with `backend=sdk` and `allow_motion=false`. The default
-selects `package_manifest.x86-docker.yaml`; the local profile selects
-`package_manifest.sdk-read-only.yaml`. Both manifests expose the same `odom`-only
-package identity, so no `twist_in` subscription, motion controller, joint
-controller, or arm path is created. The manifest/backend pairing is enforced at
-runtime and fails initialization if it is misconfigured.
+The default `robonix_manifest.yaml` is the publishable, URL-and-tag-pinned
+deployment. It selects `package_manifest.x86-docker.yaml`, publishes odom and
+the exact `stand`/`sit` posture RPC, and uses one `MotionLevelControl` owner with
+velocity mode disabled. `robonix_manifest.sdk-read-only.yaml` remains the local
+state-only alternative and constructs `RequestRobotState` only. Neither profile
+creates `twist_in`, gait, damping, joint control, or autonomous navigation.
 
-The SDK wheel remains an external host artifact. Supply the pinned v1.0.8 wheel
-by absolute path before booting:
+The SDK wheel remains an external host artifact. Download the fixed CPython
+3.10 Linux x86_64 artifact from the
+[`v1.0.8` release](https://github.com/mirrormerobotics/bpx_sdk_open/releases/tag/v1.0.8),
+verify its published SHA-256, and supply it by absolute path before booting:
 
 ```bash
 export BPX_SDK_WHEEL=/absolute/path/to/bpx_sdk_open-1.0.8-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl
 rbnx boot -f robonix_manifest.yaml --no-update-check -v
 ```
 
+For the local Docker workflow, the repository provides a single launcher that
+generates an ephemeral hardware-specific manifest and starts Atlas, Soma and a
+BPX SDK Primitive. It remains read-only unless posture mode is explicitly
+selected; only the wheel and robot IP are required:
+
+```bash
+bash scripts/start-sdk-read-only-docker.sh \
+  --sdk-wheel /absolute/path/to/bpx_sdk_open-1.0.8-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl \
+  --robot-ip 192.168.1.237
+```
+
+`--network-mode auto` selects bridge mode on Docker Desktop and host mode on
+native Linux. Bridge mode automatically publishes the configured state UDP
+port and discovers the Docker bridge gateway used to reach Atlas. Use
+`--dry-run` to validate the inputs and inspect the generated manifest without
+starting any component. Run `--help` for optional port, rate, timeout, ROS
+domain, image, container-name and fixed-Robonix-source overrides.
+
+The launcher verifies the pinned wheel checksum and fixed Robonix commit. By
+default it writes `backend=sdk`, `allow_motion=false` and the SDK read-only
+package manifest. `--release-posture` plus
+`--confirm-physical-posture-service` selects the production odom + posture
+manifest; `--posture-test` selects the separate diagnostic identity. Neither
+mode can select the fake motion-development identity or create `twist_in`.
+
+The complete Chinese operator procedure, including preflight, optional raw SDK
+capture, capability checks, `/odom`, `/joint_states`, Driver lifecycle and
+shutdown cleanup, is in [HARDWARE_TEST_GUIDE.md](HARDWARE_TEST_GUIDE.md).
+The separately authorized stand/hold/sit MotionLevelControl debug procedure is
+in [POSTURE_TEST_GUIDE.md](POSTURE_TEST_GUIDE.md). The first hardware
+state-loop result is in
+[POSTURE_VALIDATION.md](POSTURE_VALIDATION.md).
+The follow-up Robonix gRPC lifecycle/concurrency procedure is in
+[POSTURE_SERVICE_TEST_GUIDE.md](POSTURE_SERVICE_TEST_GUIDE.md). It uses a
+distinct hardware-test identity while also documenting the production option.
+The first sequential hardware stand/sit RPC result is recorded in
+[POSTURE_SERVICE_VALIDATION.md](POSTURE_SERVICE_VALIDATION.md); live lifecycle
+interruption, concurrency, failure, and onsite evidence remain open.
+The next operator-run, odometry-closed-loop in-place yaw test is documented in
+[YAW_CIRCLE_TEST_GUIDE.md](YAW_CIRCLE_TEST_GUIDE.md). It is also standalone and
+does not add `twist_in` to the Deployment.
+
 The Primitive start wrapper verifies SHA-256
-`6a0bcb708c55605dfbfeead6c84141f474505f1c01efbdb564e3dfa4549889c7`,
+`23dec27cd4c90cfe5531fbccf5db15e44c5ec4d4b6d2a76941e61def957db115`,
 mounts the wheel read-only into the runtime container, and installs it without
 network access. Update `robot_ip` and the state connection settings in the
 profile for the target robot. Activation waits at most 10 seconds for a fresh
 odometry frame and fails closed otherwise.
 
-The packaging and SDK import path have been validated without a robot. With the
-default IP unreachable, a full boot declared only `odom`, timed out after the
+The earlier dev.1 packaging and SDK import path were first validated without a
+robot. With the default IP unreachable, that full boot declared only `odom`, timed out after the
 configured 10 seconds, transitioned through `ERROR` to `TERMINATED`, and left
 no container behind. The same check was repeated from a fresh public Robot clone
-and fresh Robonix package cache: the default URL/tag dependency resolved
+and fresh Robonix package cache: the then-default URL/tag dependency resolved
 `v0.1.0-dev.1` to Primitive commit `0bba6e5` before following the same
-fail-closed path. The profile has not yet produced telemetry from BPX hardware;
-that step requires a safe test area, confirmed robot IP/firmware, and
-hardware-team approval.
+fail-closed path.
+
+The local SDK read-only profile has now also reached `ACTIVE` against a BPX at
+temporary address `192.168.1.237`. Atlas exposed `odom` only, and independent
+ROS 2 consumers received live `/odom` and 12-joint `/joint_states`. Driver
+DEACTIVATE/ACTIVATE restored telemetry, and normal `rbnx shutdown` left no
+Primitive container. See [HARDWARE_VALIDATION.md](HARDWARE_VALIDATION.md) for
+the exact platform, rates, lifecycle evidence, and remaining physical checks.
+
+On this Docker Desktop development host, robot UDP telemetry required bridge
+mode with an explicit `9873:9873/udp` mapping. The test topology also exposed
+Atlas to the local Docker bridge and set `BPX_DOCKER_HOST_ADDRESS` to that
+bridge gateway. These are local development overrides; native Linux Docker
+continues to use the normal host-network profile.
 
 The next model milestone is limited to measured body dimensions and, if the IMU
 ROS stream is retained, its physical frame/extrinsic. Navigation footprint and
@@ -156,6 +209,11 @@ external perception frames are out of scope.
 
 Safety gates and future hardware evidence are tracked in [SAFETY.md](SAFETY.md),
 [HARDWARE_CHECKLIST.md](HARDWARE_CHECKLIST.md),
+[POSTURE_TEST_GUIDE.md](POSTURE_TEST_GUIDE.md),
+[POSTURE_VALIDATION.md](POSTURE_VALIDATION.md),
+[POSTURE_SERVICE_TEST_GUIDE.md](POSTURE_SERVICE_TEST_GUIDE.md),
+[POSTURE_SERVICE_VALIDATION.md](POSTURE_SERVICE_VALIDATION.md),
+[YAW_CIRCLE_TEST_GUIDE.md](YAW_CIRCLE_TEST_GUIDE.md),
 [ACCEPTANCE.md](ACCEPTANCE.md), and [THIRD_PARTY.md](THIRD_PARTY.md).
 
 ## License
