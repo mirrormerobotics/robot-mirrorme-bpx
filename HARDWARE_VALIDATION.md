@@ -152,12 +152,26 @@ Native Linux Docker should continue to use the default host-network path. The
 Docker Desktop overrides are development-host settings, not portable values to
 copy into the Catalog manifest.
 
+## Operator-confirmed odometry directions — 2026-09-08
+
+The onsite operator confirmed the following by comparing physical robot motion
+with actual odometry output: positive x is forward, positive y is left, and
+positive yaw is a left turn. The operator explicitly clarified that this was
+observed output, not just the joystick or velocity-command convention.
+
+This is operator-reported acceptance evidence. No raw capture, video, exact
+field names, or artifact hash was supplied for this follow-up, so it is not
+attributed to a new wheel or firmware baseline. It closes the direction check
+used as the Catalog Draft gate. World-frame origin, initial heading, and
+reconnect/reboot reset behavior remain unverified; world position x must not
+be interpreted as robot-forward displacement at every heading.
+
 ## Still open
 
 - formal BPX model, serial number, and motion-controller firmware record;
 - physical operator, emergency-stop, controller-priority, and site-safety
   verification;
-- physical odometry axes/origin, joint sign/zero, IMU frame/extrinsic,
+- odometry world-frame origin/reset behavior, joint sign/zero, IMU frame/extrinsic,
   temperature/current units, and covariance sources;
 - vendor timestamp semantics and observed upload-rate differences;
 - unplug/replug, robot reboot, firewall, long-duration soak, and native Ubuntu

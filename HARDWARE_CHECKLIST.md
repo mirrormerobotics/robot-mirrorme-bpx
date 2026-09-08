@@ -54,7 +54,8 @@ primitive-mirrorme-bpx-quadruped-rbnx/scripts/record-sdk-replay.sh \
 ## 坐标与单位确认
 
 - [x] SDK 文档确认 LegOdom position 为 m、body velocity 为 m/s、angular velocity 为 rad/s
-- [ ] LegOdom 的物理轴向、原点和正方向需要现场运动参考确认
+- [x] 2026-09-08 操作者确认 Odom 实际输出：+x 向前、+y 向左、+yaw 左转
+- [ ] 世界坐标原点、初始朝向及重连/重启后的变化仍需单独确认
 - [x] SDK 文档确认四元数分量顺序为 XYZW，30 秒实测归一化 norm 稳定为 1.0
 - [x] 12 个关节索引到官方 URDF 名称的映射已在真机消息中确认
 - [ ] 12 个关节角度正方向、零位和速度单位需要物理姿态确认
