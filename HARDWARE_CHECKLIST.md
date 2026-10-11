@@ -55,7 +55,11 @@ primitive-mirrorme-bpx-quadruped-rbnx/scripts/record-sdk-replay.sh \
 
 - [x] SDK 文档确认 LegOdom position 为 m、body velocity 为 m/s、angular velocity 为 rad/s
 - [x] 2026-09-08 操作者确认 Odom 实际输出：+x 向前、+y 向左、+yaw 左转
-- [ ] 世界坐标原点、初始朝向及重连/重启后的变化仍需单独确认
+- [x] 已提供分阶段只读采集与对比工具，按 [操作指南第 15 节](HARDWARE_TEST_GUIDE.md#15-世界坐标原点sdk-重连与整机重启验收) 执行
+- [ ] 启动世界坐标原点：保存 P0/H0 启动基线及现场标记
+- [ ] 初始朝向：保存 H0/H1 两次启动朝向下的前进位移与现场方向
+- [ ] SDK 重连：保持相同物理位置/朝向/姿态，对比新会话前后坐标
+- [ ] 整机重启：保持相同物理位置/朝向/姿态，对比断电重启前后坐标
 - [x] SDK 文档确认四元数分量顺序为 XYZW，30 秒实测归一化 norm 稳定为 1.0
 - [x] 12 个关节索引到官方 URDF 名称的映射已在真机消息中确认
 - [ ] 12 个关节角度正方向、零位和速度单位需要物理姿态确认

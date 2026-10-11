@@ -49,7 +49,11 @@ bash scripts/test-offline-integration.sh /path/to/fixed/robonix replay
 ## 尚待真机/现场确认
 
 - [x] 2026-09-08 操作者对照真机运动与 Odom 实际输出确认：+x 向前、+y 向左、+yaw 左转
-- [ ] Odom 世界坐标原点及重连/重启行为、关节方向/零位、温度和电池电流单位
+- [x] Odom 原点验收的分阶段只读采集与离线对比工具已准备，见 [操作指南第 15 节](HARDWARE_TEST_GUIDE.md#15-世界坐标原点sdk-重连与整机重启验收)
+- [ ] Odom 启动原点及初始朝向（待实际分阶段证据）
+- [ ] Odom SDK 新会话重连后的坐标行为（待实际分阶段证据）
+- [ ] Odom 整机断电重启后的坐标行为（待实际分阶段证据）
+- [ ] 关节方向/零位、温度和电池电流单位
 - [ ] vendor timestamp 的单位、epoch、wrap/reset 和实测速率偏差
 - [ ] IMU frame/外参及 covariance；未确认前不发布正式 IMU 数据
 - [ ] 拔网线、机器人重启、长时间 soak 和异常进程退出时的只读 session 清理

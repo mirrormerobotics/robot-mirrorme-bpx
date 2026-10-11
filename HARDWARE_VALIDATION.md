@@ -168,6 +168,29 @@ be interpreted as robot-forward displacement at every heading.
 
 ## Still open
 
+### Origin/reconnect/reboot evidence preparation — 2026-09-14
+
+The staged read-only capture and offline comparison tools are available; see
+[hardware guide section 15](HARDWARE_TEST_GUIDE.md#15-世界坐标原点sdk-重连与整机重启验收).
+This update contains software preparation only: no new robot session, motion
+command, power cycle, raw hardware capture, or hardware acceptance result.
+
+Pending evidence must separately record:
+
+- startup origin: `boot_p0`, physical P0/H0 marks and initial observed xyz/yaw;
+- initial heading: `h0_before/after` and `h1_before/after`, actual travel headings;
+- new SDK session: `reconnect_before/after`, unchanged physical pose/posture;
+- manual power cycle: `reboot_before/after`, unchanged physical pose/posture and
+  power-off/on times, including any movement during startup.
+
+Keep raw JSONL, comparison reports, wheel/SDK/robot versions, asset identifiers,
+operator notes and photo/video references together. Candidate classifications
+are observations, not automatic pass/fail verdicts. Missing or ambiguous
+evidence keeps the corresponding checklist item open. Network interruption
+and Deployment automatic recovery are outside this specific test.
+
+### Remaining hardware items
+
 - formal BPX model, serial number, and motion-controller firmware record;
 - physical operator, emergency-stop, controller-priority, and site-safety
   verification;

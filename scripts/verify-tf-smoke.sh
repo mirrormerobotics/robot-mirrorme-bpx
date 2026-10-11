@@ -2,9 +2,19 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-IMAGE="${BPX_TF_TEST_IMAGE:-primitive-mirrorme-bpx-quadruped-rbnx:dev}"
-ROS_DOMAIN_ID="${BPX_TF_ROS_DOMAIN_ID:-221}"
-CONTAINER="${BPX_TF_TEST_CONTAINER:-rbnx_mirrorme_bpx_tf_test_$$}"
+IMAGE="primitive-mirrorme-bpx-quadruped-rbnx:dev"
+ROS_DOMAIN_ID="221"
+CONTAINER="rbnx_mirrorme_bpx_tf_test_$$"
+
+source "$(dirname "${BASH_SOURCE[0]}")/lib/cli.sh"
+cli_init 'bash scripts/verify-tf-smoke.sh [options]'
+cli_option --image IMAGE 'TF smoke-test image'
+cli_option --ros-domain-id ROS_DOMAIN_ID 'ROS domain ID (default: 221)'
+cli_option --container-name CONTAINER 'Test container name'
+cli_parse "$@"
+cli_no_args
+[[ "$ROS_DOMAIN_ID" =~ ^[0-9]{1,3}$ ]] && ((10#$ROS_DOMAIN_ID <= 232)) ||
+  cli_die '--ros-domain-id must be in 0..232'
 
 command -v docker >/dev/null 2>&1 || {
   echo "docker is required for the robot_state_publisher TF smoke test" >&2

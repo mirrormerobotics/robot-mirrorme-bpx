@@ -47,8 +47,7 @@ bash scripts/build-container.sh
 Docker Desktop/WSL2 使用：
 
 ```bash
-BPX_DOCKER_NETWORK_MODE=bridge \
-  bash scripts/run-yaw-circle-probe.sh \
+bash scripts/run-yaw-circle-probe.sh --network-mode bridge \
     /root/workspace/c2/bpx_sdk_open/main/wheelhouse/bpx_sdk_open-1.0.8-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl \
     --robot-ip 192.168.1.237 \
     --robot-state-port 9873 \
@@ -63,7 +62,7 @@ BPX_DOCKER_NETWORK_MODE=bridge \
     --confirm-physical-yaw-circle
 ```
 
-原生 Linux Docker 省略 `BPX_DOCKER_NETWORK_MODE=bridge`，使用默认 host 网络。
+原生 Linux Docker 省略 `--network-mode bridge`，使用默认 host 网络。
 将 `--yaw-rate-rps` 改为负数可以反向旋转；适配层限制其绝对值为
 `0.1..1.0 rad/s`。首次测试建议保留默认 `0.5 rad/s`。
 `--opposite-direction-tolerance-rad` 默认是 `0.2 rad`；只用于容忍 odom 抖动，

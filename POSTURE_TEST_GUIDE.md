@@ -33,15 +33,14 @@
 先设置 wheel 的绝对路径：
 
 ```bash
-export BPX_WHEEL=/root/workspace/c2/bpx_sdk_open/main/wheelhouse/bpx_sdk_open-1.0.8-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl
+BPX_WHEEL=/root/workspace/c2/bpx_sdk_open/main/wheelhouse/bpx_sdk_open-1.0.8-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl
 ```
 
 Docker Desktop/WSL2 使用 bridge 网络和显式 UDP 映射：
 
 ```bash
 cd /root/workspace/c2/robonix_adapt/primitive-mirrorme-bpx-quadruped-rbnx
-BPX_DOCKER_NETWORK_MODE=bridge \
-  bash scripts/run-posture-cycle-probe.sh "$BPX_WHEEL" \
+bash scripts/run-posture-cycle-probe.sh "$BPX_WHEEL" --network-mode bridge \
     --robot-ip 192.168.1.237 \
     --robot-state-port 9873 \
     --state-rate-hz 50 \
@@ -51,7 +50,7 @@ BPX_DOCKER_NETWORK_MODE=bridge \
 ```
 
 原生 Linux Docker 使用默认的 host 网络，省略
-`BPX_DOCKER_NETWORK_MODE=bridge` 即可。先运行以下安全命令可以查看参数，不会连接
+`--network-mode bridge` 即可。先运行以下安全命令可以查看参数，不会连接
 机器人或发送动作：
 
 ```bash

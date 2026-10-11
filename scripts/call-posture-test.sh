@@ -4,8 +4,16 @@ set -euo pipefail
 ROBOT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 WORKSPACE="$(cd "$ROBOT_ROOT/.." && pwd)"
 PRIMITIVE_ROOT="$WORKSPACE/primitive-mirrorme-bpx-quadruped-rbnx"
-ROBONIX_SOURCE="${ROBONIX_SOURCE_PATH:-/tmp/robonix_dev_next}"
-OUTER_CONTAINER="${BPX_SDK_DEPLOY_CONTAINER:-rbnx_mirrorme_bpx_sdk}"
+ROBONIX_SOURCE="/tmp/robonix_dev_next"
+OUTER_CONTAINER="rbnx_mirrorme_bpx_sdk"
+source "$(dirname "${BASH_SOURCE[0]}")/lib/cli.sh"
+cli_init 'bash scripts/call-posture-test.sh stand|sit [provider-id] [options]'
+cli_option --container-name OUTER_CONTAINER 'Running Deployment container'
+cli_option --robonix-source ROBONIX_SOURCE 'Robonix source path inside Deployment'
+cli_option --primitive-root PRIMITIVE_ROOT 'Primitive path inside Deployment'
+cli_parse "$@"
+set -- "${CLI_ARGS[@]}"
+(($# >= 1 && $# <= 2)) || cli_die 'expected stand|sit and optional provider-id'
 POSTURE="${1:-}"
 PROVIDER_ID="${2:-mirrorme_bpx}"
 

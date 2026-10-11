@@ -44,15 +44,16 @@ SDK read-only profile：
 - 测试主机能够到达机器人 IP；
 - UDP 状态端口可用，默认 `9873`。
 
-本文示例使用：
+本文用以下普通 Shell 变量复用参数值，不需要 `export`；脚本从命令入参读取它们，
+也可直接把变量引用替换为实际路径、IP 和端口：
 
 ```bash
-export BPX_WHEEL=/root/workspace/c2/bpx_sdk_open/main/wheelhouse/bpx_sdk_open-1.0.8-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl
-export BPX_ROBOT_IP=192.168.1.237
-export BPX_STATE_PORT=9873
-export BPX_ROBOT_ROOT=/root/workspace/c2/robonix_adapt/robot-mirrorme-bpx
-export BPX_PRIMITIVE_ROOT=/root/workspace/c2/robonix_adapt/primitive-mirrorme-bpx-quadruped-rbnx
-export BPX_ROBONIX_SOURCE=/tmp/robonix_dev_next
+BPX_WHEEL=/root/workspace/c2/bpx_sdk_open/main/wheelhouse/bpx_sdk_open-1.0.8-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl
+BPX_ROBOT_IP=192.168.1.237
+BPX_STATE_PORT=9873
+BPX_ROBOT_ROOT=/root/workspace/c2/robonix_adapt/robot-mirrorme-bpx
+BPX_PRIMITIVE_ROOT=/root/workspace/c2/robonix_adapt/primitive-mirrorme-bpx-quadruped-rbnx
+BPX_ROBONIX_SOURCE=/tmp/robonix_dev_next
 ```
 
 如果真机 IP、wheel 或 Robonix checkout 不同，应替换对应值。不要把临时 IP 或
@@ -132,8 +133,7 @@ Docker Desktop：
 ```bash
 cd "$BPX_PRIMITIVE_ROOT"
 
-BPX_DOCKER_NETWORK_MODE=bridge \
-  bash scripts/run-read-only-probe.sh "$BPX_WHEEL" \
+bash scripts/run-read-only-probe.sh "$BPX_WHEEL" --network-mode bridge \
     --robot-ip "$BPX_ROBOT_IP" \
     --robot-state-port "$BPX_STATE_PORT" \
     --state-rate-hz 10 \
@@ -141,7 +141,7 @@ BPX_DOCKER_NETWORK_MODE=bridge \
     --sample-period-s 0.1
 ```
 
-原生 Linux Docker 将 `BPX_DOCKER_NETWORK_MODE` 改成 `host`，或直接省略该变量。
+原生 Linux Docker 使用 `--network-mode host`，或省略该参数使用默认值。
 
 正常结果应满足：
 
@@ -159,8 +159,7 @@ BPX_DOCKER_NETWORK_MODE=bridge \
 ```bash
 mkdir -p "$BPX_PRIMITIVE_ROOT/.artifacts/hardware/manual"
 
-BPX_DOCKER_NETWORK_MODE=bridge \
-  bash "$BPX_PRIMITIVE_ROOT/scripts/record-sdk-replay.sh" \
+bash "$BPX_PRIMITIVE_ROOT/scripts/record-sdk-replay.sh" --network-mode bridge \
     "$BPX_WHEEL" \
     "$BPX_PRIMITIVE_ROOT/.artifacts/hardware/manual/bpx-odom-test-01.jsonl" \
     --robot-ip "$BPX_ROBOT_IP" \
@@ -423,3 +422,138 @@ Docker Desktop 必须使用 bridge + 显式 UDP 映射；一键脚本的 `auto` 
 
 不需要在宿主机直接运行 `rbnx`。`start-sdk-read-only-docker.sh` 使用固定工具镜像和
 缓存中的 Robonix CLI。
+
+## 15. 世界坐标原点、SDK 重连与整机重启验收
+
+本节工具只使用 `RequestRobotState`，**不发送站立、趴下、速度、归零或重启命令**。
+你使用手柄操作和手动重启；不需要启动 Deployment。这里验证 SDK 原始世界坐标行为，
+不代表已经验证 Deployment 自动恢复、断网恢复或里程计精度。适配器目前直接使用
+SDK 位置／姿态，不进行坐标原点补偿。
+
+### 准备
+
+本节的 `BPX_WHEEL`、`BPX_ODOM_RUN` 是普通 Shell 路径变量，用于显式传参，
+不需要 `export`。也可在命令相应位置直接填写路径。镜像／网络等使用
+`--image`、`--network-mode`，详见 [脚本参数说明](SCRIPT_CLI.md)。
+
+停止其他 SDK 客户端及本项目已有 Deployment，确认 UDP 9873 无占用。清空测试区域，
+准备手柄和急停；断电前由操作者让机器人安全趴下。脚本不会检查现场是否安全。
+
+进入相邻 Primitive 仓库，使用前文经过校验的 `BPX_WHEEL`；脚本沿用已有 `:dev`
+镜像、安装所给 wheel 并只读挂载当前源码，不会自动创建镜像。Docker Desktop/WSL
+按前文选择 bridge；Linux 主机可选 host。
+
+```bash
+cd /root/workspace/c2/robonix_adapt/primitive-mirrorme-bpx-quadruped-rbnx
+BPX_ODOM_RUN="$(mktemp -d /tmp/bpx-odom-origin.XXXXXX)"
+echo "$BPX_ODOM_RUN"
+
+# BPX_WHEEL 需先设置为实际 wheel 的绝对路径。
+record_stage() {
+  bash scripts/record-odom-stage.sh "$BPX_WHEEL" "$BPX_ODOM_RUN" "$1" \
+    --network-mode bridge --robot-ip 192.168.1.237 --robot-state-port 9873 \
+    --state-rate-hz 10 --duration-s 10 --sample-period-s 0.1 \
+    --note "${2:-}"
+}
+```
+
+每个阶段保存为 `$BPX_ODOM_RUN/<阶段>.jsonl`，同名文件拒绝覆盖。
+
+如果本轮使用本地 `bpx_sdk_open_out/v1.0.8/wheelhouse` 下的 wheel
+（SHA256 `6a0bcb708c55605dfbfeead6c84141f474505f1c01efbdb564e3dfa4549889c7`），
+请在 `verify-sdk-wheel.sh` 和上述 `record_stage` 内的 `record-odom-stage.sh`
+命令中都加上 `--sdk-profile local-v1.0.8`。此选项仅供独立只读采集，不适用于
+完整 Deployment 或运动测试；它与默认发布制品不是同一个验收基线。
+详情见 Primitive 仓库 `SCRIPT_CLI.md` 的本地 wheel 小节。
+
+记录包含 UTC 时间、阶段备注、SDK／机器人版本、wheel SHA256、完整原始状态与结束状态。
+请在备注中补充机器人型号／序列号、固件资产版本、物理位置／朝向／姿态和实际操作；
+SDK 上报版本不能替代正式资产记录。保留地面标记照片或视频，与采集阶段对应。
+数据文件不会自动上传或提交到 Git。
+
+终端显示 `xyz`（世界坐标 m）、`yaw`（rad）、`v_body`（机体系 m/s）、
+`omega_body`（机体系 rad/s）、SDK 原始时间戳、连接状态和时间戳未变化时长。
+`unchanged=0` 的首帧本身不能证明新鲜；离线报告要求后续时间戳变化。
+Ctrl-C 会保留已写数据并断开 SDK；异常／中断阶段不自动作为完整验收证据，应换阶段名重采。
+
+### A. 初次启动原点和朝向
+
+1. 在地面标记 P0 和朝向 H0，手动启动机器人，待状态稳定，不改变位置／朝向。
+2. 执行 `record_stage boot_p0 "P0/H0; initial boot; lying; asset=..."`。
+3. 手动站立并稳定，执行 `record_stage h0_before "P0/H0; standing; before forward"`。
+4. 沿 H0 手动短距离直行并停稳，执行 `record_stage h0_after "H0; standing; after forward"`。
+
+记录初次可用数据的 x/y/yaw，而不是预设必须为零。工具启动晚于机器人，不能据此推断
+固件在上电瞬间的内部初始化时刻。世界位置轴不等于机器人在任意朝向下的前／左方向。
+
+### B. SDK 重连（机器人不重启）
+
+1. 遥操至明显不同于 P0 的 P1，再转至明显不同于 H0 的 H1（例如约 90°，现场条件允许时）。
+   确认原始 xy 位移和 yaw 均明显非零，否则重置和保留无法区分。
+2. 保持同一姿态、位置和朝向静止，执行：
+
+   ```bash
+   record_stage reconnect_before "P1/H1; stationary; before client disconnect"
+   ```
+
+3. 等脚本自然退出，确认 SDK 已断开且 UDP 端口释放。**不要移动、重启机器人或归零**，执行：
+
+   ```bash
+   record_stage reconnect_after "P1/H1; unchanged physical pose; new SDK process"
+   ```
+
+这测试的是新 SDK 进程／会话重连，不是连接存活期间断网后自动重连。
+
+### C. 整机重启
+
+1. 在 P1/H1 手动安全趴下并停稳；重新标记趴下后的实际位置和朝向。
+2. 执行 `record_stage reboot_before "P1/H1; lying; before power cycle"`，等待退出。
+3. **手动断电重启**，不要挪动机器人；记录断电／上电时间及现场动作。若启动时发生移动，
+   必须记录，不能把运动造成的变化解释成坐标重置；必要时重新安排测试。
+4. 待启动完成，在相同位置／朝向／趴下姿态执行：
+   `record_stage reboot_after "P1/H1; lying; after power cycle; physical pose unchanged"`。
+5. 手动站立并停稳，执行 `record_stage h1_before "H1; standing; before forward"`；
+   沿 H1 短距离直行并停稳，再执行 `record_stage h1_after "H1; standing; after forward"`。
+
+比较 A 和 C 的前进位移向量：若它随地面 H0/H1 变化，或每次启动都沿相同世界轴，
+分别记录观察，结合重启前后 yaw 判断坐标轴是否依赖启动朝向。不能只靠 yaw 变零得出结论。
+z 会受姿态及估计器影响，单独记录，不用站立／趴下的高度差判断 xy 原点重置。
+
+### D. 离线生成报告
+
+以下命令在 Primitive 仓库运行，只需要 Python 3.8+，不需要 SDK、Docker 或真机：
+
+```bash
+python3 -m bpx_quadruped.odom_acceptance compare \
+  "$BPX_ODOM_RUN/reconnect_before.jsonl" "$BPX_ODOM_RUN/reconnect_after.jsonl" \
+  --output "$BPX_ODOM_RUN/reconnect-report.json"
+
+python3 -m bpx_quadruped.odom_acceptance compare \
+  "$BPX_ODOM_RUN/reboot_before.jsonl" "$BPX_ODOM_RUN/reboot_after.jsonl" \
+  --output "$BPX_ODOM_RUN/reboot-report.json"
+```
+
+同样可将 `h0_before/h0_after`、`h1_before/h1_after` 作为两输入，取得前进前后的
+世界位移 `delta.position_m`；这两组之间本来发生了运动，不应将 `other_jump` 解释成重置。
+
+默认比较前文件末尾 3 秒与后文件首个新鲜样本后等待 2 秒起的 3 秒静止区间。
+要求至少 3 个新鲜样本，区间覆盖不少于 80%，样本间隙不超过 0.5 秒。
+默认位置／yaw 对比容差分别为 0.05 m／0.05 rad，静止速度阈值为
+0.05 m/s／0.05 rad/s；这些是**观察辅助参数，不是厂商精度保证或验收标准**。
+可用 `--window-s`、`--settle-s`、`--max-gap-s`、`--position-tolerance-m`、
+`--yaw-tolerance-rad`、`--stationary-speed-mps`、`--stationary-rate-rps` 调整，报告会保存参数。
+不要单纯放宽阈值以隐藏移动或陈旧数据。
+
+- `continuous_candidate`：与原值接近，仍需确认现场未移动。
+- `reset_to_zero_candidate`：原值明显非零，后值接近零，疑似重置。
+- `other_jump`：存在非归零跳变，需结合现场动作进一步分析。
+- `near_zero_inconclusive`：两边都近零，不能区分保留与归零，应从非零位置／角度重测。
+- `insufficient_evidence`：样本缺失、陈旧、不静止、中断或版本不一致等；退出码为 2，
+  仍会保存报告。正常生成候选观察退出码为 0，**不代表硬件验收通过**。
+
+时间戳是否回退独立报告，不推断其单位、不直接认定坐标重置，也不跨进程比较主机
+单调时间。SDK Odom 与时间戳由独立 getter 读取，并非原子快照。
+
+完成后提供原始 JSONL、报告、现场备注和照片／视频。仅在实际证据充分时更新
+`HARDWARE_VALIDATION.md`、验收清单与 TODO，分别填写启动原点、初始朝向、SDK 重连、
+整机重启四项结论；不能用“工具测试通过”替代真机验收。

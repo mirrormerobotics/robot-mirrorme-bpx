@@ -4,15 +4,40 @@ set -euo pipefail
 ROBOT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 WORKSPACE="$(cd "$ROBOT_ROOT/.." && pwd)"
 PRIMITIVE_ROOT="$WORKSPACE/primitive-mirrorme-bpx-quadruped-rbnx"
-ROBONIX_SOURCE="${ROBONIX_SOURCE_PATH:-${1:-/tmp/robonix_dev_next}}"
-PROFILE="${BPX_OFFLINE_PROFILE:-${2:-replay}}"
-EXPECTED_COMMIT="${RBNX_EXPECTED_COMMIT:-f6cacfc4b402eb57c75b553d375c6cfaba11dce7}"
-TOOL_IMAGE="${BPX_RBNX_TOOL_IMAGE:-mirrorme-bpx-rbnx-codegen:dev}"
-RUNTIME_IMAGE="${BPX_RBNX_IMAGE:-primitive-mirrorme-bpx-quadruped-rbnx:dev}"
-OUTER_CONTAINER="${BPX_OFFLINE_OUTER_CONTAINER:-rbnx_mirrorme_bpx_offline_test}"
-TARGET_CACHE="${BPX_RBNX_TARGET_CACHE:-$PRIMITIVE_ROOT/.artifacts/rbnx-tool/target}"
-CARGO_CACHE="${BPX_RBNX_CARGO_CACHE:-$PRIMITIVE_ROOT/.artifacts/rbnx-tool/cargo}"
-CONFIG_CACHE="${BPX_RBNX_CONFIG_CACHE:-$PRIMITIVE_ROOT/.artifacts/rbnx-tool/config}"
+ROBONIX_SOURCE=""
+PROFILE=""
+EXPECTED_COMMIT="f6cacfc4b402eb57c75b553d375c6cfaba11dce7"
+TOOL_IMAGE="mirrorme-bpx-rbnx-codegen:dev"
+RUNTIME_IMAGE="primitive-mirrorme-bpx-quadruped-rbnx:dev"
+OUTER_CONTAINER="rbnx_mirrorme_bpx_offline_test"
+PRIMITIVE_CONTAINER="rbnx_mirrorme_bpx_quadruped"
+TARGET_CACHE="$PRIMITIVE_ROOT/.artifacts/rbnx-tool/target"
+CARGO_CACHE="$PRIMITIVE_ROOT/.artifacts/rbnx-tool/cargo"
+CONFIG_CACHE="$PRIMITIVE_ROOT/.artifacts/rbnx-tool/config"
+source "$(dirname "${BASH_SOURCE[0]}")/lib/cli.sh"
+cli_init 'bash scripts/test-offline-integration.sh [SOURCE [replay|fake]] [options]'
+cli_option --robonix-source ROBONIX_SOURCE 'Fixed Robonix checkout'
+cli_option --profile PROFILE 'replay (default) or fake'
+cli_option --expected-commit EXPECTED_COMMIT 'Expected full Robonix commit'
+cli_option --tool-image TOOL_IMAGE 'Robonix tool image'
+cli_option --runtime-image RUNTIME_IMAGE 'Primitive runtime image'
+cli_option --container-name OUTER_CONTAINER 'Outer test container'
+cli_option --primitive-container PRIMITIVE_CONTAINER 'Primitive container'
+cli_option --target-cache TARGET_CACHE 'Rust target cache'
+cli_option --cargo-cache CARGO_CACHE 'Cargo cache'
+cli_option --config-cache CONFIG_CACHE 'Robonix config cache'
+cli_parse "$@"
+((${#CLI_ARGS[@]} <= 2)) || cli_die 'too many positional arguments'
+if ((${#CLI_ARGS[@]} >= 1)); then
+  [[ -z "$ROBONIX_SOURCE" ]] || cli_die 'source specified twice'
+  ROBONIX_SOURCE="${CLI_ARGS[0]}"
+fi
+if ((${#CLI_ARGS[@]} == 2)); then
+  [[ -z "$PROFILE" ]] || cli_die 'profile specified twice'
+  PROFILE="${CLI_ARGS[1]}"
+fi
+ROBONIX_SOURCE="${ROBONIX_SOURCE:-/tmp/robonix_dev_next}"
+PROFILE="${PROFILE:-replay}"
 
 case "$PROFILE" in
   replay)
@@ -44,6 +69,10 @@ actual_commit="$(git -C "$ROBONIX_SOURCE" rev-parse HEAD)"
   echo "unexpected Robonix commit: $actual_commit" >&2
   exit 1
 }
+mkdir -p "$TARGET_CACHE" "$CARGO_CACHE" "$CONFIG_CACHE"
+TARGET_CACHE="$(realpath "$TARGET_CACHE")"
+CARGO_CACHE="$(realpath "$CARGO_CACHE")"
+CONFIG_CACHE="$(realpath "$CONFIG_CACHE")"
 [[ -x "$TARGET_CACHE/release/rbnx" ]] || {
   echo "fixed rbnx binary is missing; run Primitive scripts/verify-rbnx.sh first" >&2
   exit 2
@@ -56,12 +85,11 @@ if docker inspect "$OUTER_CONTAINER" >/dev/null 2>&1; then
 fi
 
 DOCKER_BIN="$(realpath "$(command -v docker)")"
-mkdir -p "$TARGET_CACHE" "$CARGO_CACHE" "$CONFIG_CACHE"
 
 cleanup() {
   docker stop -t 30 "$OUTER_CONTAINER" >/dev/null 2>&1 || true
   docker rm -f "$OUTER_CONTAINER" >/dev/null 2>&1 || true
-  bash "$PRIMITIVE_ROOT/scripts/stop.sh" >/dev/null 2>&1 || true
+  bash "$PRIMITIVE_ROOT/scripts/stop.sh" --container-name "$PRIMITIVE_CONTAINER" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT INT TERM
 
@@ -75,6 +103,8 @@ docker run --detach \
   -v "$TARGET_CACHE:/target" \
   -v "$CARGO_CACHE:/cargo" \
   -v "$CONFIG_CACHE:/root/.robonix" \
+  -e "BPX_RBNX_IMAGE=$RUNTIME_IMAGE" \
+  -e "BPX_RBNX_CONTAINER=$PRIMITIVE_CONTAINER" \
   -e CARGO_HOME=/cargo \
   -e CARGO_TARGET_DIR=/target \
   -e "ROBONIX_SOURCE=$ROBONIX_SOURCE" \

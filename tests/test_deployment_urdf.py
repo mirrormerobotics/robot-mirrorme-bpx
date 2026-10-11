@@ -112,7 +112,7 @@ class ShellWrapperTest(unittest.TestCase):
 
     def test_tf_smoke_default_domain_is_valid_for_fast_dds(self) -> None:
         script = (ROOT / "scripts/verify-tf-smoke.sh").read_text(encoding="utf-8")
-        match = re.search(r'ROS_DOMAIN_ID="\$\{BPX_TF_ROS_DOMAIN_ID:-(\d+)\}"', script)
+        match = re.search(r'ROS_DOMAIN_ID="(\d+)"', script)
         self.assertIsNotNone(match)
         self.assertLessEqual(int(match.group(1)), 232)
 

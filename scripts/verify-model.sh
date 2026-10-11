@@ -3,7 +3,12 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MODEL_DIR="$ROOT/description/bpx"
-ROS_IMAGE="${BPX_MODEL_ROS_IMAGE:-ros:humble-ros-base@sha256:75dd3aba34a3838dadbb31a9f7bef769bdfa8713e6cec686fc868db2981b0987}"
+ROS_IMAGE="ros:humble-ros-base@sha256:75dd3aba34a3838dadbb31a9f7bef769bdfa8713e6cec686fc868db2981b0987"
+source "$(dirname "${BASH_SOURCE[0]}")/lib/cli.sh"
+cli_init 'bash scripts/verify-model.sh [options]'
+cli_option --image ROS_IMAGE 'ROS check_urdf image'
+cli_parse "$@"
+cli_no_args
 VENDOR_URDF="$MODEL_DIR/urdf/bpx.urdf"
 DEPLOYMENT_URDF="$ROOT/urdf/mirrorme_bpx.urdf"
 

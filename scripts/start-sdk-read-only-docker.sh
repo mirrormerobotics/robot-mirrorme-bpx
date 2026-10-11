@@ -13,12 +13,15 @@ CONNECT_TIMEOUT_S=10.0
 ROS_DOMAIN_ID_VALUE=223
 NETWORK_MODE=auto
 DOCKER_HOST_ADDRESS=""
-ROBONIX_SOURCE="${ROBONIX_SOURCE_PATH:-/tmp/robonix_dev_next}"
-EXPECTED_ROBONIX_COMMIT="${RBNX_EXPECTED_COMMIT:-f6cacfc4b402eb57c75b553d375c6cfaba11dce7}"
-TOOL_IMAGE="${BPX_RBNX_TOOL_IMAGE:-mirrorme-bpx-rbnx-codegen:dev}"
-RUNTIME_IMAGE="${BPX_RBNX_IMAGE:-primitive-mirrorme-bpx-quadruped-rbnx:dev}"
-OUTER_CONTAINER="${BPX_SDK_DEPLOY_CONTAINER:-rbnx_mirrorme_bpx_sdk}"
-PRIMITIVE_CONTAINER="${BPX_RBNX_CONTAINER:-rbnx_mirrorme_bpx_quadruped}"
+ROBONIX_SOURCE="/tmp/robonix_dev_next"
+EXPECTED_ROBONIX_COMMIT="f6cacfc4b402eb57c75b553d375c6cfaba11dce7"
+TOOL_IMAGE="mirrorme-bpx-rbnx-codegen:dev"
+RUNTIME_IMAGE="primitive-mirrorme-bpx-quadruped-rbnx:dev"
+OUTER_CONTAINER="rbnx_mirrorme_bpx_sdk"
+PRIMITIVE_CONTAINER="rbnx_mirrorme_bpx_quadruped"
+TARGET_CACHE=""
+CARGO_CACHE=""
+CONFIG_CACHE=""
 DRY_RUN=0
 KEEP_MANIFEST=0
 OUTER_STARTED=0
@@ -48,6 +51,10 @@ Options:
                                auto-detected from Docker bridge by default
   --robonix-source PATH        Fixed Robonix checkout
                                (default: /tmp/robonix_dev_next)
+  --expected-commit SHA        Expected full Robonix commit
+  --target-cache PATH          Rust target cache
+  --cargo-cache PATH           Cargo cache
+  --config-cache PATH          Robonix config cache
   --tool-image IMAGE           Container image carrying the fixed rbnx tool
   --runtime-image IMAGE        BPX Primitive runtime image
   --container-name NAME        Outer Deployment container name
@@ -74,7 +81,7 @@ die() {
 
 require_value() {
   [[ $# -ge 2 ]] || die "$1 requires a value"
-  [[ -n "${2:-}" ]] || die "$1 requires a value"
+  [[ -n "${2:-}" && "$2" != --* && "$2" != -h ]] || die "$1 requires a value"
 }
 
 is_ipv4() {
@@ -90,7 +97,21 @@ is_ipv4() {
 }
 
 while [[ $# -gt 0 ]]; do
+  if [[ "$1" == --*=* ]]; then
+    option="${1%%=*}"
+    value="${1#*=}"
+    shift
+    set -- "$option" "$value" "$@"
+  fi
   case "$1" in
+    --expected-commit)
+      require_value "$@"; EXPECTED_ROBONIX_COMMIT="$2"; shift 2 ;;
+    --target-cache)
+      require_value "$@"; TARGET_CACHE="$2"; shift 2 ;;
+    --cargo-cache)
+      require_value "$@"; CARGO_CACHE="$2"; shift 2 ;;
+    --config-cache)
+      require_value "$@"; CONFIG_CACHE="$2"; shift 2 ;;
     --sdk-wheel)
       require_value "$@"
       SDK_WHEEL="$2"
@@ -264,12 +285,15 @@ else
   ATLAS_LISTEN="127.0.0.1:50051"
 fi
 
-TARGET_CACHE="$PRIMITIVE_ROOT/.artifacts/rbnx-tool/target"
-CARGO_CACHE="$PRIMITIVE_ROOT/.artifacts/rbnx-tool/cargo"
-CONFIG_CACHE="$PRIMITIVE_ROOT/.artifacts/rbnx-tool/config"
+TARGET_CACHE="${TARGET_CACHE:-$PRIMITIVE_ROOT/.artifacts/rbnx-tool/target}"
+CARGO_CACHE="${CARGO_CACHE:-$PRIMITIVE_ROOT/.artifacts/rbnx-tool/cargo}"
+CONFIG_CACHE="${CONFIG_CACHE:-$PRIMITIVE_ROOT/.artifacts/rbnx-tool/config}"
+mkdir -p "$TARGET_CACHE" "$CARGO_CACHE" "$CONFIG_CACHE"
+TARGET_CACHE="$(realpath "$TARGET_CACHE")"
+CARGO_CACHE="$(realpath "$CARGO_CACHE")"
+CONFIG_CACHE="$(realpath "$CONFIG_CACHE")"
 RBNX_BIN="$TARGET_CACHE/release/rbnx"
 CODEGEN_BIN="$TARGET_CACHE/release/robonix-codegen"
-mkdir -p "$TARGET_CACHE" "$CARGO_CACHE" "$CONFIG_CACHE"
 
 if [[ ! -x "$RBNX_BIN" || ! -x "$CODEGEN_BIN" ]] ||
   ! docker image inspect "$TOOL_IMAGE" >/dev/null 2>&1; then
@@ -277,7 +301,10 @@ if [[ ! -x "$RBNX_BIN" || ! -x "$CODEGEN_BIN" ]] ||
     die "fixed rbnx tools are missing; run Primitive scripts/verify-rbnx.sh first"
   fi
   echo "Preparing fixed Robonix CLI/tool image..."
-  bash "$PRIMITIVE_ROOT/scripts/verify-rbnx.sh" "$ROBONIX_SOURCE"
+  bash "$PRIMITIVE_ROOT/scripts/verify-rbnx.sh" "$ROBONIX_SOURCE" \
+    --package-root "$PRIMITIVE_ROOT" \
+    --expected-commit "$EXPECTED_ROBONIX_COMMIT" --tool-image "$TOOL_IMAGE" \
+    --target-cache "$TARGET_CACHE" --cargo-cache "$CARGO_CACHE" --config-cache "$CONFIG_CACHE"
 fi
 
 TEMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/mirrorme-bpx-sdk-deploy.XXXXXX")"

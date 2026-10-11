@@ -2,6 +2,26 @@
 
 Safety-first Robot Deployment skeleton for the MirrorMe BPX quadruped.
 
+## 开发分支接手说明
+
+两个仓库配套使用开发分支 `feature/operator-cli-odom-handoff`。请将
+`primitive-mirrorme-bpx-quadruped-rbnx` 和 `robot-mirrorme-bpx` 放在相邻目录，
+并同时检出该分支。分支包含脚本命令行配置、分阶段 Odom 只读采集与离线比较，
+以及默认 TF 容器名、缓存路径和同版本 SDK wheel 替换的修复。
+
+先在 Primitive 仓库运行 `bash scripts/test.sh`，再按其 `SCRIPT_CLI.md` 准备
+固定版本的 Robonix 工具、SDK wheel 和运行镜像。在 Robot 仓库运行
+`python3 -m unittest discover -s tests -v`，准备完成后按下文进行 Docker 集成验证。
+开发分支的完整真机部署使用 `scripts/start-sdk-read-only-docker.sh`，它引用相邻
+Primitive 仓库的本地源码；默认 `robonix_manifest.yaml` 仍使用 `v0.1.0-dev.2`。
+
+本次修复通过本地单元测试和隔离的命令行为验证。接手后需要复验真实 Docker
+集成，并按 [HARDWARE_TEST_GUIDE.md 第 15 节](HARDWARE_TEST_GUIDE.md#15-世界坐标原点sdk-重连与整机重启验收)
+补齐 Odom 启动原点、初始朝向、新 SDK 会话重连与整机断电重启的分阶段真机证据。
+[HARDWARE_CHECKLIST.md](HARDWARE_CHECKLIST.md) 和 [ACCEPTANCE.md](ACCEPTANCE.md)
+中的未完成项目继续待验收；历史验证记录不能代替本分支的复验结果。完成验收后
+再更新发布版本、创建新的不可变 tag，并调整默认 Deployment 依赖。
+
 `robonix_manifest.yaml` is the pre-release Catalog/default deployment. It
 starts Atlas + Soma and fetches the odom + posture Primitive from immutable tag
 `v0.1.0-dev.2`. The external BPX SDK wheel and reachable hardware are required
@@ -129,8 +149,10 @@ The SDK wheel remains an external host artifact. Download the fixed CPython
 verify its published SHA-256, and supply it by absolute path before booting:
 
 ```bash
-export BPX_SDK_WHEEL=/absolute/path/to/bpx_sdk_open-1.0.8-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl
-rbnx boot -f robonix_manifest.yaml --no-update-check -v
+bash scripts/start-sdk-read-only-docker.sh \
+  --sdk-wheel /absolute/path/to/bpx_sdk_open-1.0.8-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl \
+  --robot-ip 192.168.1.237 --release-posture \
+  --confirm-physical-posture-service
 ```
 
 For the local Docker workflow, the repository provides a single launcher that
@@ -222,3 +244,9 @@ This Robot Deployment is licensed under the BSD 3-Clause License. See
 [LICENSE](LICENSE). The vendored BPX model retains its own copy of the same
 license and provenance under `description/bpx/`; the separately distributed
 BPX SDK is licensed under Apache-2.0.
+
+## 命令行参数
+
+所有用户操作脚本均可用 `--help` 查看选项。
+镜像、网络模式、容器名、缓存目录等参数见 [SCRIPT_CLI.md](SCRIPT_CLI.md)。
+文档中的普通 Shell 变量仅用于复用路径，再显式传入命令；它们不是脚本的隐式配置。
