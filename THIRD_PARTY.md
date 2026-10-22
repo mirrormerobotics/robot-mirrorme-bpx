@@ -29,6 +29,14 @@
 - A release SBOM and the SDK's internal native-library dependency audit remain
   required before publishing a Docker image that embeds the SDK wheel.
 
+2026-10-15: the available cp310 x86_64 wheel was checksum-verified and all
+members hashed. ELF dynamic dependencies and local image OS/Python package
+inventories are recorded in `.artifacts/non-motion/20261015/inventory/`.
+Reproduce with `scripts/inventory_artifacts.py`. This does not identify all
+statically linked libraries or replace the upstream license/NOTICE audit.
+The external wheel is now available in the parent workspace's `.deps/sdk/`;
+it is still not tracked in this repository or embedded in the runtime image.
+
 ## Container base
 
 - Runtime base: `ros:humble-ros-base` pinned by digest in the Primitive

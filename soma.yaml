@@ -17,7 +17,11 @@ robot:
     - id: body
       type: quadruped_base
       urdf_link: base_link
-      exports: []
+      exports:
+        - provider_id: mirrorme_bpx
+          capabilities:
+            - {path: robonix/primitive/quadruped/odom, description: "Read body odometry; not localization or navigation."}
+            - {path: robonix/primitive/quadruped/posture, description: "Explicit stand/sit only; startup does not move the robot."}
       components:
         - id: front_left_leg
           type: leg
@@ -46,7 +50,7 @@ description:
     - "Map, localize, plan paths, avoid obstacles, or navigate autonomously."
     - "Claim an IMU frame before its physical extrinsic is measured."
   notes:
-    - "The no-motion manifest launches no Primitive, service, or skill package."
+    - "This file describes the dev.2 release posture profile; other profiles select their own soma.*.yaml."
     - "Deployment base_link is an identity parent of the vendor-defined torso frame."
     - "JointState index order follows the pinned SDK JointIndex contract; physical angle signs and zero positions still require hardware confirmation."
     - "Mapping/Nav2/RTAB-Map and lidar/camera navigation integration are explicitly outside the BPX product scope."

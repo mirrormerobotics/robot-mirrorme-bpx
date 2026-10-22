@@ -1,5 +1,19 @@
 # BPX Robonix 验收矩阵
 
+2026-10-13 软件收尾：新增运动健康/进度采集、停滞提前终止和 SDK 会话 release。
+单测 161 + 42 通过；完整离线运行的 motion 旧消息断言修复后，motion 单项复测通过，
+其余集成阶段已通过。操作及尚未完成的现场项目见
+[FIXES_AND_RETEST_2026-10-13.md](FIXES_AND_RETEST_2026-10-13.md)。
+
+2026-10-13 补录：20cm目标反馈约7.58cm后超时；15°目标因反馈健康故障取消，
+详见 [MOTION_VALIDATION_2026-10-13.md](MOTION_VALIDATION_2026-10-13.md)。
+
+最新核验见 [TASK_STATUS_2026-10-12.md](TASK_STATUS_2026-10-12.md)：基础接入已验证，
+基本运动执行已现场验证；距离/角度闭环仍待标定，新增控制权释放路径待真机验收。
+
+2026-10-12 新开发机的完整离线复验见 [OFFLINE_VALIDATION.md](OFFLINE_VALIDATION.md)。
+这次结果不改变下文任何尚待真机/现场确认的勾选状态。
+
 ## 已完成的离线验收
 
 - [x] 固定 Robonix、SDK contract、模型和 ROS 基础镜像基线
@@ -12,7 +26,7 @@
 - [x] 默认 Robot manifest 包含完整的 `catalog:` 预发布元数据
 - [x] Primitive 默认/x86 Docker 发布身份声明 `odom` 与 `posture`；SDK read-only/
   replay 诊断身份只声明 `odom`
-- [x] fake Twist 仅存在于独立、非发布且强制 fake backend 的 `motion_dev` 身份
+- [x] `motion_dev` 强制 fake backend；新增 `motion_test`/`motion_test_fake` 均为非发布身份
 - [x] replay package 只声明 `robonix/primitive/quadruped/odom`
 - [x] replay deployment 达到 ACTIVE，并接收到 `/odom`、`/joint_states` 和同 stamp Odom TF
 - [x] 当前 profile 只有一个 Odom publisher；fake 只有一个 Twist consumer 并拒绝非平面 Twist
@@ -45,6 +59,8 @@ bash scripts/test-offline-integration.sh /path/to/fixed/robonix replay
 - [x] Docker Desktop 使用 bridge + UDP 9873 显式映射的兼容路径已验证
 
 详细证据见 [HARDWARE_VALIDATION.md](HARDWARE_VALIDATION.md)。
+2026-10-12 本机复验见 [READ_ONLY_VALIDATION_2026-10-12.md](READ_ONLY_VALIDATION_2026-10-12.md)，
+不代表历史列表中的全部项目已在本机重新执行。
 
 ## 尚待真机/现场确认
 
@@ -78,12 +94,19 @@ bash scripts/test-offline-integration.sh /path/to/fixed/robonix replay
   容器/UDP 9873 残留；该能力纳入 `v0.1.0-dev.2`，真机故障注入仍待补
 - [x] 独立手动 yaw-circle 探针实现 `setVelocity(0,0,yaw)`，含命令方向一致的 odom 一圈闭环、零速度 flush、超时、状态、最大平移和反方向门禁
 - [ ] 按 [YAW_CIRCLE_TEST_GUIDE.md](YAW_CIRCLE_TEST_GUIDE.md) 由操作者完成一次真机原地一圈并记录现场证据
-- [ ] 通用 `setVelocity(x, y, yaw)` 到 Robonix `twist_in` 的映射（已确定，暂缓实现）
-- [ ] 有界 move 的闭环、取消、超时及 finally 归零
+- [x] 通用 `setVelocity(x, y, yaw)` 到 Robonix `twist_in` 的非发布测试实现
+- [x] 有界 move 的闭环、取消、超时及 finally 归零实现和离线测试
+- [x] 本次本地 stand/sit confirmed；0.2m/s、1s 定时速度 RPC 成功，动作结束后 DISARMED、无锁存故障
+- [x] 操作者确认 15°/50°目标均实际发生旋转；未重新 arm 时请求被拒绝，正常 shutdown 后无运行容器
+- [ ] 15°/50°旋转的实际角度与完成条件核验（当前返回 timeout，不代表没有执行）
+- [ ] 上述新增能力的真机验收，见 [MOTION_TEST_GUIDE.md](MOTION_TEST_GUIDE.md)
+- [ ] 修复距离 move 超时：0.1m 不动、1m 可移动但未成功完成；需要动作遥测证据
+- [ ] 修复/明确 SDK 与 App 控制权交还：用户确认 shutdown 后 App 前进/转向恢复
+- [ ] 向使用者明确暴露内部 motion FAULT，避免误读生命周期 ACTIVE
 - [ ] NaN、超限、命令 stale、状态 stale、断网、SIGTERM/SIGKILL 和重启测试
 - [ ] 每个故障场景有停止时间、日志和视频证据
 
-在全部运动项通过前，不创建 `chassis-test`/full-motion profile；发布身份仅声明
+已创建独立、默认未解锁的 `chassis-test` 非发布测试 profile；发布身份仅声明
 `stand`/`sit` posture，不声明 move 或真实 `twist_in` 能力。独立 posture-test
 诊断身份不得提交 Catalog。
 

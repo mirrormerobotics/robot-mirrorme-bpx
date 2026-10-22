@@ -1,0 +1,25 @@
+# Non-release end-to-end motion acceptance without an SDK or robot.
+manifestVersion: 1
+name: robonix.robot.mirrorme.bpx.motion_test_fake
+env:
+  ROS_DOMAIN_ID: "225"
+system:
+  atlas:
+    listen: 127.0.0.1:50051
+  soma:
+    listen: 127.0.0.1:50091
+    robot_yaml: ./soma.motion-test-fake.yaml
+primitive:
+  - name: mirrorme_bpx_motion
+    path: ../primitive-mirrorme-bpx-quadruped-rbnx
+    manifest: package_manifest.motion-test-fake.yaml
+    config:
+      backend: fake
+      allow_motion: true
+      enable_motion_service: true
+      auto_arm_fake: false
+      motion_lease_s: 30.0
+      command_rate_hz: 50
+      publish_odom_tf: true
+service: []
+skill: []

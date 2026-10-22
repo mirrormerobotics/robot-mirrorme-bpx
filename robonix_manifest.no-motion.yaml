@@ -8,6 +8,7 @@ system:
     listen: 127.0.0.1:50051
   soma:
     listen: 127.0.0.1:50091
+    robot_yaml: ./soma.no-motion.yaml
 
 primitive: []
 service: []

@@ -189,6 +189,17 @@ if len(sys.argv) > 1 and sys.argv[1] == "inspect":
             self.assertIn(str(self.work / "cargo") + ":/cargo", cmd)
             self.assertIn(str(self.work / "config") + ":/root/.robonix", cmd)
 
+    def test_motion_confirmation_and_mode_exclusivity_precede_docker(self):
+        for flags in (("--motion-test",), ("--confirm-physical-motion-test",),
+                      ("--motion-test", "--confirm-physical-motion-test", "--posture-test")):
+            result = subprocess.run([
+                "bash", str(ROOT / "scripts/start-sdk-read-only-docker.sh"),
+                "--sdk-wheel", "/missing.whl", "--robot-ip", "10.21.40.1", *flags,
+            ], env=self.env, text=True, capture_output=True, timeout=10)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertNotIn("SDK wheel is not a file", result.stderr)
+            self.assertEqual(self.calls(), [])
+
     def relative_cache_fixture(self):
         config = self.work / "existing config"
         config.mkdir()

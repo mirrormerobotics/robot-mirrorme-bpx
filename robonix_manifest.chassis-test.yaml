@@ -1,0 +1,31 @@
+# UNRELEASED: requires an operator, local startup acknowledgment, SDK wheel,
+# and a separate local arm after standing. Never use as the Catalog default.
+manifestVersion: 1
+name: robonix.robot.mirrorme.bpx.motion_test
+env:
+  ROS_DOMAIN_ID: "225"
+  BPX_SDK_WHEEL: "${BPX_SDK_WHEEL}"
+  BPX_CONFIRM_PHYSICAL_MOTION_TEST: "${BPX_CONFIRM_PHYSICAL_MOTION_TEST}"
+system:
+  atlas:
+    listen: 127.0.0.1:50051
+  soma:
+    listen: 127.0.0.1:50091
+    robot_yaml: ./soma.motion-test.yaml
+primitive:
+  - name: mirrorme_bpx_motion
+    path: ../primitive-mirrorme-bpx-quadruped-rbnx
+    manifest: package_manifest.motion-test.yaml
+    config:
+      backend: sdk
+      robot_ip: 10.21.20.1
+      allow_motion: true
+      enable_motion_service: true
+      auto_arm_fake: false
+      motion_lease_s: 30.0
+      command_rate_hz: 50
+      state_timeout_s: 0.5
+      command_timeout_s: 0.25
+      publish_odom_tf: false
+service: []
+skill: []

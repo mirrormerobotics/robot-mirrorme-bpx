@@ -15,9 +15,9 @@ TARGET_CACHE="$PRIMITIVE_ROOT/.artifacts/rbnx-tool/target"
 CARGO_CACHE="$PRIMITIVE_ROOT/.artifacts/rbnx-tool/cargo"
 CONFIG_CACHE="$PRIMITIVE_ROOT/.artifacts/rbnx-tool/config"
 source "$(dirname "${BASH_SOURCE[0]}")/lib/cli.sh"
-cli_init 'bash scripts/test-offline-integration.sh [SOURCE [replay|fake]] [options]'
+cli_init 'bash scripts/test-offline-integration.sh [SOURCE [replay|fake|motion]] [options]'
 cli_option --robonix-source ROBONIX_SOURCE 'Fixed Robonix checkout'
-cli_option --profile PROFILE 'replay (default) or fake'
+cli_option --profile PROFILE 'replay (default), fake or motion (fake backend)'
 cli_option --expected-commit EXPECTED_COMMIT 'Expected full Robonix commit'
 cli_option --tool-image TOOL_IMAGE 'Robonix tool image'
 cli_option --runtime-image RUNTIME_IMAGE 'Primitive runtime image'
@@ -50,8 +50,13 @@ case "$PROFILE" in
     PROVIDER_ID="mirrorme_bpx_quadruped"
     ROS_DOMAIN_ID_VALUE="222"
     ;;
+  motion)
+    MANIFEST="$ROBOT_ROOT/robonix_manifest.motion-test-fake.yaml"
+    PROVIDER_ID="mirrorme_bpx_motion"
+    ROS_DOMAIN_ID_VALUE="225"
+    ;;
   *)
-    echo "profile must be replay or fake" >&2
+    echo "profile must be replay, fake or motion (fake backend)" >&2
     exit 2
     ;;
 esac
@@ -65,6 +70,7 @@ command -v docker >/dev/null 2>&1 || {
   exit 2
 }
 actual_commit="$(git -C "$ROBONIX_SOURCE" rev-parse HEAD)"
+ROBONIX_SOURCE="$(realpath "$ROBONIX_SOURCE")"
 [[ "$actual_commit" == "$EXPECTED_COMMIT" ]] || {
   echo "unexpected Robonix commit: $actual_commit" >&2
   exit 1
@@ -214,6 +220,17 @@ if [[ "$PROFILE" == "fake" ]]; then
       echo "provider did not log rejection of non-planar Twist" >&2
       exit 1
     }
+fi
+
+if [[ "$PROFILE" == "motion" ]]; then
+  grep -q "quadruped/move" <<<"$caps_output"
+  docker exec -e PYTHONPATH=/pkg:/robonix-api:/pkg/rbnx-build/codegen/proto_gen "$PRIMITIVE_CONTAINER" bash -c 'source /opt/ros/humble/setup.bash; python3 /pkg/tests/verify_motion_rpc.py'
+  docker exec "$PRIMITIVE_CONTAINER" python3 -m bpx_quadruped.local_control arm
+  docker exec -w /pkg -e PYTHONPATH=/pkg:/robonix-api:/pkg/rbnx-build/codegen/proto_gen "$PRIMITIVE_CONTAINER" bash -c 'source /opt/ros/humble/setup.bash; python3 -m bpx_quadruped.motion_capture --forward-m .05 --duration-sec 5' > "$ROBOT_ROOT/.artifacts/motion-capture-fake.jsonl"
+  python3 "$ROBOT_ROOT/scripts/analyze_acceptance.py" "$ROBOT_ROOT/.artifacts/motion-capture-fake.jsonl"
+  python3 -c 'import json,sys; data=[json.loads(l) for l in open(sys.argv[1]) if l.startswith("{")]; assert any(x.get("event")=="motion_status" for x in data); assert any(x.get("event")=="result" and x.get("success") for x in data)' "$ROBOT_ROOT/.artifacts/motion-capture-fake.jsonl"
+  docker exec -w /pkg "$PRIMITIVE_CONTAINER" python3 -m bpx_quadruped.local_control release
+  docker exec -w /pkg "$PRIMITIVE_CONTAINER" python3 -m bpx_quadruped.local_control status | python3 -c 'import json,sys; s=json.load(sys.stdin); assert s["released"] and s["lifecycle"]=="shutdown"'
 fi
 
 docker stop -t 30 "$OUTER_CONTAINER" >/dev/null

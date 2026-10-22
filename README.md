@@ -2,6 +2,15 @@
 
 Safety-first Robot Deployment skeleton for the MirrorMe BPX quadruped.
 
+Soma descriptions are selected per deployment profile. See
+[M6_VALIDATION_2026-10-15.md](M6_VALIDATION_2026-10-15.md) for provider exports,
+capability limits, and regeneration of the shared body descriptions.
+
+For a fresh development machine without hardware, start with
+[OFFLINE_DEVELOPMENT.md](OFFLINE_DEVELOPMENT.md). The offline verification
+entry point records source versions, logs, and results for unit tests or the
+complete fake/replay Docker workflow.
+
 ## 开发分支接手说明
 
 两个仓库配套使用开发分支 `feature/operator-cli-odom-handoff`。请将
@@ -74,7 +83,7 @@ not load the BPX SDK or send a robot command.
 ## No-motion profile
 
 `robonix_manifest.no-motion.yaml` contains only the built-in Atlas and Soma
-systems. Its primitive, service, and skill lists are empty. `soma.yaml` exposes
+systems. Its primitive, service, and skill lists are empty. `soma.no-motion.yaml` exposes
 the pinned body description but intentionally does not claim a motion provider,
 overall dimensions, or sensor frames that have not yet been measured.
 
@@ -250,3 +259,8 @@ BPX SDK is licensed under Apache-2.0.
 所有用户操作脚本均可用 `--help` 查看选项。
 镜像、网络模式、容器名、缓存目录等参数见 [SCRIPT_CLI.md](SCRIPT_CLI.md)。
 文档中的普通 Shell 变量仅用于复用路径，再显式传入命令；它们不是脚本的隐式配置。
+## Unreleased motion development
+
+Continuous velocity and bounded standard `move` are available in separate,
+locally armed test profiles. See [MOTION_TEST_GUIDE.md](MOTION_TEST_GUIDE.md)
+for offline regression, operator commands, limits and pending hardware checks.

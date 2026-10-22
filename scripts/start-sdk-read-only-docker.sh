@@ -9,6 +9,8 @@ SDK_WHEEL=""
 ROBOT_IP=""
 ROBOT_STATE_PORT=9873
 STATE_RATE_HZ=50
+IMU_FRAME=""
+PUBLISH_ODOM_TF=false
 CONNECT_TIMEOUT_S=10.0
 ROS_DOMAIN_ID_VALUE=223
 NETWORK_MODE=auto
@@ -27,6 +29,8 @@ KEEP_MANIFEST=0
 OUTER_STARTED=0
 POSTURE_TEST=0
 RELEASE_POSTURE=0
+MOTION_TEST=0
+CONFIRM_MOTION_TEST=0
 CONFIRM_POSTURE_TEST=0
 POSTURE_CONFIRMATION="I_UNDERSTAND_POSTURE_RPC_CAN_MOVE_BPX"
 
@@ -42,6 +46,8 @@ Required:
   --robot-ip IPV4              Reachable BPX IPv4 address
 
 Options:
+  --imu-frame FRAME           Enable raw IMU publication in this sensor frame
+  --publish-odom-tf           Publish odom -> base_link (axes must be verified)
   --robot-state-port PORT      Robot state UDP receive port (default: 9873)
   --state-rate-hz HZ           Requested SDK state rate (default: 50)
   --connect-timeout-s SECONDS  First-odometry timeout (default: 10.0)
@@ -63,6 +69,9 @@ Options:
   --keep-manifest              Keep the generated YAML after exit
   --posture-test               Select the non-release stand/sit Robonix RPC
   --release-posture            Select the production odom + stand/sit package
+  --motion-test               Select the unreleased locally armed motion profile
+  --confirm-physical-motion-test
+                              Required with --motion-test; never auto-arms
   --confirm-physical-posture-service
                                Acknowledge that posture RPCs move the robot;
                                required with either posture option
@@ -104,6 +113,10 @@ while [[ $# -gt 0 ]]; do
     set -- "$option" "$value" "$@"
   fi
   case "$1" in
+    --imu-frame)
+      require_value "$@"; IMU_FRAME="$2"; shift 2 ;;
+    --publish-odom-tf)
+      PUBLISH_ODOM_TF=true; shift ;;
     --expected-commit)
       require_value "$@"; EXPECTED_ROBONIX_COMMIT="$2"; shift 2 ;;
     --target-cache)
@@ -193,6 +206,10 @@ while [[ $# -gt 0 ]]; do
       RELEASE_POSTURE=1
       shift
       ;;
+    --motion-test)
+      MOTION_TEST=1; shift ;;
+    --confirm-physical-motion-test)
+      CONFIRM_MOTION_TEST=1; shift ;;
     --confirm-physical-posture-service)
       CONFIRM_POSTURE_TEST=1
       shift
@@ -209,6 +226,8 @@ done
 
 [[ -n "$SDK_WHEEL" ]] || die "--sdk-wheel is required"
 [[ -n "$ROBOT_IP" ]] || die "--robot-ip is required"
+((POSTURE_TEST + RELEASE_POSTURE + MOTION_TEST <= 1)) || die "deployment modes are mutually exclusive"
+((MOTION_TEST == CONFIRM_MOTION_TEST)) || die "--motion-test requires --confirm-physical-motion-test (and vice versa)"
 if ((POSTURE_TEST && RELEASE_POSTURE)); then
   die "--posture-test and --release-posture are mutually exclusive"
 fi
@@ -312,10 +331,25 @@ MANIFEST="$TEMP_DIR/robonix_manifest.yaml"
 LOG_DIR="$ROBOT_ROOT/rbnx-boot/logs"
 mkdir -p "$LOG_DIR"
 
-if ((RELEASE_POSTURE)); then
+ENABLE_MOTION_SERVICE=false
+MOTION_CONFIRMATION_VALUE=""
+if ((MOTION_TEST)); then
+  DEPLOYMENT_NAME="robonix.robot.mirrorme.bpx.motion_test.live"
+  PRIMITIVE_NAME="mirrorme_bpx_motion"
+  PACKAGE_MANIFEST="package_manifest.motion-test.yaml"
+  SOMA_FILE="soma.motion-test.yaml"
+  ALLOW_MOTION=true
+  ENABLE_POSTURE_SERVICE=false
+  ENABLE_MOTION_SERVICE=true
+  POSTURE_CONFIRMATION_VALUE=""
+  MOTION_CONFIRMATION_VALUE="I_UNDERSTAND_MOTION_TEST_CAN_MOVE_BPX"
+  PROFILE_DESCRIPTION="BPX unreleased supervised motion-test Deployment (initially DISARMED)"
+  START_DESCRIPTION="Atlas + Soma + BPX motion-test Primitive"
+elif ((RELEASE_POSTURE)); then
   DEPLOYMENT_NAME="robonix.robot.mirrorme.bpx.release.live"
   PRIMITIVE_NAME="mirrorme_bpx"
   PACKAGE_MANIFEST="package_manifest.x86-docker.yaml"
+  SOMA_FILE="soma.yaml"
   ALLOW_MOTION="true"
   ENABLE_POSTURE_SERVICE="true"
   POSTURE_CONFIRMATION_VALUE="$POSTURE_CONFIRMATION"
@@ -325,6 +359,7 @@ elif ((POSTURE_TEST)); then
   DEPLOYMENT_NAME="robonix.robot.mirrorme.bpx.posture_test.live"
   PRIMITIVE_NAME="mirrorme_bpx_posture"
   PACKAGE_MANIFEST="package_manifest.posture-test.yaml"
+  SOMA_FILE="soma.posture-test.yaml"
   ALLOW_MOTION="true"
   ENABLE_POSTURE_SERVICE="true"
   POSTURE_CONFIRMATION_VALUE="$POSTURE_CONFIRMATION"
@@ -334,6 +369,7 @@ else
   DEPLOYMENT_NAME="robonix.robot.mirrorme.bpx.sdk_read_only.live"
   PRIMITIVE_NAME="mirrorme_bpx_state"
   PACKAGE_MANIFEST="package_manifest.sdk-read-only.yaml"
+  SOMA_FILE="soma.sdk-read-only.yaml"
   ALLOW_MOTION="false"
   ENABLE_POSTURE_SERVICE="false"
   POSTURE_CONFIRMATION_VALUE=""
@@ -363,6 +399,9 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+[[ -z "$IMU_FRAME" || "$IMU_FRAME" =~ ^[A-Za-z][A-Za-z0-9_]*$ ]] || die 'invalid IMU frame'
+PUBLISH_IMU=false
+[[ -z "$IMU_FRAME" ]] || PUBLISH_IMU=true
 cat >"$MANIFEST" <<EOF
 manifestVersion: 1
 name: $DEPLOYMENT_NAME
@@ -371,13 +410,14 @@ env:
   ROS_DOMAIN_ID: "$ROS_DOMAIN_ID_VALUE"
   BPX_SDK_WHEEL: "\${BPX_SDK_WHEEL}"
   BPX_CONFIRM_PHYSICAL_POSTURE_SERVICE: "\${BPX_CONFIRM_PHYSICAL_POSTURE_SERVICE}"
+  BPX_CONFIRM_PHYSICAL_MOTION_TEST: "\${BPX_CONFIRM_PHYSICAL_MOTION_TEST}"
 
 system:
   atlas:
     listen: $ATLAS_LISTEN
   soma:
     listen: 127.0.0.1:50091
-    robot_yaml: "$ROBOT_ROOT/soma.yaml"
+    robot_yaml: "$ROBOT_ROOT/$SOMA_FILE"
 
 primitive:
   - name: $PRIMITIVE_NAME
@@ -387,6 +427,7 @@ primitive:
       backend: sdk
       allow_motion: $ALLOW_MOTION
       enable_posture_service: $ENABLE_POSTURE_SERVICE
+      enable_motion_service: $ENABLE_MOTION_SERVICE
       auto_arm_fake: false
       robot_ip: $ROBOT_IP
       robot_state_port: $ROBOT_STATE_PORT
@@ -399,7 +440,9 @@ primitive:
       odom_frame: odom
       base_frame: base_link
       odom_rate_hz: $STATE_RATE_HZ.0
-      publish_odom_tf: false
+      publish_odom_tf: $PUBLISH_ODOM_TF
+      publish_imu: $PUBLISH_IMU
+      imu_frame: "$IMU_FRAME"
       state_timeout_s: 0.5
 
 service: []
@@ -454,6 +497,7 @@ DOCKER_RUN+=(
   -e ROBONIX_CODEGEN_BIN=/target/release/robonix-codegen
   -e "BPX_SDK_WHEEL=$SDK_WHEEL"
   -e "BPX_CONFIRM_PHYSICAL_POSTURE_SERVICE=$POSTURE_CONFIRMATION_VALUE"
+  -e "BPX_CONFIRM_PHYSICAL_MOTION_TEST=$MOTION_CONFIRMATION_VALUE"
   -e "BPX_DOCKER_NETWORK_MODE=$NETWORK_MODE"
   -e "BPX_DOCKER_STATE_UDP_PORT=$ROBOT_STATE_PORT"
   -e "BPX_RBNX_IMAGE=$RUNTIME_IMAGE"
