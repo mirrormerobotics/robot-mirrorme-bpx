@@ -225,7 +225,6 @@ fi
 if [[ "$PROFILE" == "motion" ]]; then
   grep -q "quadruped/move" <<<"$caps_output"
   docker exec -e PYTHONPATH=/pkg:/robonix-api:/pkg/rbnx-build/codegen/proto_gen "$PRIMITIVE_CONTAINER" bash -c 'source /opt/ros/humble/setup.bash; python3 /pkg/tests/verify_motion_rpc.py'
-  docker exec "$PRIMITIVE_CONTAINER" python3 -m bpx_quadruped.local_control arm
   docker exec -w /pkg -e PYTHONPATH=/pkg:/robonix-api:/pkg/rbnx-build/codegen/proto_gen "$PRIMITIVE_CONTAINER" bash -c 'source /opt/ros/humble/setup.bash; python3 -m bpx_quadruped.motion_capture --forward-m .05 --duration-sec 5' > "$ROBOT_ROOT/.artifacts/motion-capture-fake.jsonl"
   python3 "$ROBOT_ROOT/scripts/analyze_acceptance.py" "$ROBOT_ROOT/.artifacts/motion-capture-fake.jsonl"
   python3 -c 'import json,sys; data=[json.loads(l) for l in open(sys.argv[1]) if l.startswith("{")]; assert any(x.get("event")=="motion_status" for x in data); assert any(x.get("event")=="result" and x.get("success") for x in data)' "$ROBOT_ROOT/.artifacts/motion-capture-fake.jsonl"

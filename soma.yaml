@@ -22,6 +22,8 @@ robot:
           capabilities:
             - {path: robonix/primitive/quadruped/odom, description: "Read body odometry; not localization or navigation."}
             - {path: robonix/primitive/quadruped/posture, description: "Explicit stand/sit only; startup does not move the robot."}
+            - {path: robonix/primitive/quadruped/twist_in, description: "Continuous planar velocity with command watchdog."}
+            - {path: robonix/primitive/quadruped/move, description: "Bounded distance/angle or timed motion; no arm required."}
       components:
         - id: front_left_leg
           type: leg
@@ -41,16 +43,16 @@ robot:
           exports: []
 
 description:
-  summary: "Pinned vendor body model for a MirrorMe BPX odometry and posture deployment."
+  summary: "Pinned vendor body model for a MirrorMe BPX unified quadruped deployment."
   can_do:
     - "Expose the pinned BPX body description through Soma for inspection."
-    - "Publish body odometry and accept explicit stand/sit posture requests."
+    - "Publish odometry; accept stand/sit, bounded moves and continuous velocity."
   cannot_do:
-    - "Accept continuous velocity, gait, damping, or joint-level commands."
+    - "Accept gait, damping, or joint-level commands."
     - "Map, localize, plan paths, avoid obstacles, or navigate autonomously."
     - "Claim an IMU frame before its physical extrinsic is measured."
   notes:
-    - "This file describes the dev.2 release posture profile; other profiles select their own soma.*.yaml."
+    - "This file describes the dev.3 unified profile; other profiles select their own soma.*.yaml."
     - "Deployment base_link is an identity parent of the vendor-defined torso frame."
     - "JointState index order follows the pinned SDK JointIndex contract; physical angle signs and zero positions still require hardware confirmation."
     - "Mapping/Nav2/RTAB-Map and lidar/camera navigation integration are explicitly outside the BPX product scope."

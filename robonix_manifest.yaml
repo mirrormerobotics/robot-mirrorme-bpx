@@ -3,15 +3,15 @@ name: robonix.robot.mirrorme.bpx
 
 catalog:
   name: robonix.robot.mirrorme.bpx
-  version: 0.1.0-dev.2
-  description: Dockerized MirrorMe BPX deployment with odometry and guarded stand/sit posture control.
+  version: 0.1.0-dev.3
+  description: Dockerized MirrorMe BPX deployment with odometry, stand/sit, bounded move and velocity control.
   license: BSD-3-Clause
-  tags: [robot, deploy, quadruped, mirrorme, bpx, docker, odom, posture]
+  tags: [robot, deploy, quadruped, mirrorme, bpx, docker, odom, posture, move, twist]
   maintainers:
-    - nonkr <nonkr@hotmail.com>
+    - M1chael0919 <2956011381@qq.com>
 
-# Pre-release default deployment: the Primitive is fetched from an immutable
-# tag and exposes odometry plus explicit stand/sit posture RPCs. Startup itself
+# The Primitive is fetched from an immutable release
+# tag and exposes odometry, posture, move and twist_in. Startup itself
 # does not move the robot; the wheel remains an external host artifact.
 env:
   ROS_DOMAIN_ID: "223"
@@ -26,12 +26,13 @@ system:
 primitive:
   - name: mirrorme_bpx
     url: https://github.com/mirrormerobotics/primitive-mirrorme-bpx-quadruped-rbnx
-    branch: v0.1.0-dev.2
+    branch: v0.1.0-dev.3
     manifest: package_manifest.x86-docker.yaml
     config:
       backend: sdk
       allow_motion: true
       enable_posture_service: true
+      enable_motion_service: true
       auto_arm_fake: false
       robot_ip: 10.21.20.1
       robot_state_port: 9873

@@ -29,6 +29,7 @@ KEEP_MANIFEST=0
 OUTER_STARTED=0
 POSTURE_TEST=0
 RELEASE_POSTURE=0
+RELEASE_MOTION=0
 MOTION_TEST=0
 CONFIRM_MOTION_TEST=0
 CONFIRM_POSTURE_TEST=0
@@ -69,7 +70,8 @@ Options:
   --keep-manifest              Keep the generated YAML after exit
   --posture-test               Select the non-release stand/sit Robonix RPC
   --release-posture            Select the production odom + stand/sit package
-  --motion-test               Select the unreleased locally armed motion profile
+  --release-motion            Select unified odom + posture + move + twist_in
+  --motion-test               Select the legacy movement-only test profile
   --confirm-physical-motion-test
                               Required with --motion-test; never auto-arms
   --confirm-physical-posture-service
@@ -202,6 +204,8 @@ while [[ $# -gt 0 ]]; do
       POSTURE_TEST=1
       shift
       ;;
+    --release-motion)
+      RELEASE_MOTION=1; shift ;;
     --release-posture)
       RELEASE_POSTURE=1
       shift
@@ -226,8 +230,8 @@ done
 
 [[ -n "$SDK_WHEEL" ]] || die "--sdk-wheel is required"
 [[ -n "$ROBOT_IP" ]] || die "--robot-ip is required"
-((POSTURE_TEST + RELEASE_POSTURE + MOTION_TEST <= 1)) || die "deployment modes are mutually exclusive"
-((MOTION_TEST == CONFIRM_MOTION_TEST)) || die "--motion-test requires --confirm-physical-motion-test (and vice versa)"
+((POSTURE_TEST + RELEASE_POSTURE + MOTION_TEST + RELEASE_MOTION <= 1)) || die "deployment modes are mutually exclusive"
+((MOTION_TEST + RELEASE_MOTION == CONFIRM_MOTION_TEST)) || die "--motion-test/--release-motion requires --confirm-physical-motion-test (and vice versa)"
 if ((POSTURE_TEST && RELEASE_POSTURE)); then
   die "--posture-test and --release-posture are mutually exclusive"
 fi
@@ -333,7 +337,18 @@ mkdir -p "$LOG_DIR"
 
 ENABLE_MOTION_SERVICE=false
 MOTION_CONFIRMATION_VALUE=""
-if ((MOTION_TEST)); then
+if ((RELEASE_MOTION)); then
+  DEPLOYMENT_NAME="robonix.robot.mirrorme.bpx.unified.live"
+  PRIMITIVE_NAME="mirrorme_bpx"
+  PACKAGE_MANIFEST="package_manifest.x86-docker.yaml"
+  SOMA_FILE="soma.yaml"
+  ALLOW_MOTION=true
+  ENABLE_POSTURE_SERVICE=true
+  ENABLE_MOTION_SERVICE=true
+  POSTURE_CONFIRMATION_VALUE=""
+  PROFILE_DESCRIPTION="BPX unified odom + posture + move + twist_in (startup idle)"
+  START_DESCRIPTION="Atlas + Soma + unified BPX Primitive"
+elif ((MOTION_TEST)); then
   DEPLOYMENT_NAME="robonix.robot.mirrorme.bpx.motion_test.live"
   PRIMITIVE_NAME="mirrorme_bpx_motion"
   PACKAGE_MANIFEST="package_manifest.motion-test.yaml"
@@ -348,8 +363,8 @@ if ((MOTION_TEST)); then
 elif ((RELEASE_POSTURE)); then
   DEPLOYMENT_NAME="robonix.robot.mirrorme.bpx.release.live"
   PRIMITIVE_NAME="mirrorme_bpx"
-  PACKAGE_MANIFEST="package_manifest.x86-docker.yaml"
-  SOMA_FILE="soma.yaml"
+  PACKAGE_MANIFEST="package_manifest.posture-only.yaml"
+  SOMA_FILE="soma.posture-only.yaml"
   ALLOW_MOTION="true"
   ENABLE_POSTURE_SERVICE="true"
   POSTURE_CONFIRMATION_VALUE="$POSTURE_CONFIRMATION"

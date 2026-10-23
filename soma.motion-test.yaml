@@ -38,12 +38,12 @@ robot:
       urdf_link: hr_hip_link
       exports: []
 description:
-  summary: Unreleased hardware motion testing with explicit local arm; bounded moves
-    and continuous velocity.
+  summary: Unreleased hardware motion testing without manual arm; bounded moves and
+    continuous velocity.
   can_do:
   - Expose the pinned BPX body model through Soma.
-  - Unreleased hardware motion testing with explicit local arm; bounded moves and
-    continuous velocity.
+  - Unreleased hardware motion testing without manual arm; bounded moves and continuous
+    velocity.
   cannot_do:
   - Map, localize, navigate autonomously, or avoid obstacles.
   - Accept joint-level control, damping, or acrobatic gait commands.

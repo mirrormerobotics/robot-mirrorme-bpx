@@ -6,12 +6,14 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 PROFILES = {
+    'posture-only': ('mirrorme_bpx', ['odom', 'posture'], 'Legacy posture-only deployment.'),
+    'unified-fake': ('mirrorme_bpx', ['odom', 'posture', 'twist_in', 'move'], 'Unified fake deployment; no hardware or SDK.'),
     'no-motion': (None, [], 'Inspect the body model without a Primitive or SDK session.'),
     'sdk-read-only': ('mirrorme_bpx_state', ['odom'], 'Read hardware odometry; no motion command interface.'),
     'replay-state': ('mirrorme_bpx_replay', ['odom'], 'Replay recorded odometry without a robot or SDK session.'),
     'fake-state': ('mirrorme_bpx_quadruped', ['odom', 'twist_in'], 'Publish simulated state; motion is disabled in this profile.'),
-    'motion-test': ('mirrorme_bpx_motion', ['odom', 'twist_in', 'move'], 'Unreleased hardware motion testing with explicit local arm; bounded moves and continuous velocity.'),
-    'motion-test-fake': ('mirrorme_bpx_motion', ['odom', 'twist_in', 'move'], 'Simulated motion testing without hardware; explicit local arm required.'),
+    'motion-test': ('mirrorme_bpx_motion', ['odom', 'twist_in', 'move'], 'Unreleased hardware motion testing without manual arm; bounded moves and continuous velocity.'),
+    'motion-test-fake': ('mirrorme_bpx_motion', ['odom', 'twist_in', 'move'], 'Simulated motion testing without hardware; no manual arm required.'),
     'posture-test': ('mirrorme_bpx_posture', ['odom', 'posture'], 'Hardware posture testing: explicit stand/sit only.'),
 }
 

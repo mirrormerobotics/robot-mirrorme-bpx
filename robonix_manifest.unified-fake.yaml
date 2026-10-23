@@ -1,0 +1,40 @@
+manifestVersion: 1
+name: robonix.robot.mirrorme.bpx.unified_fake
+env:
+  ROS_DOMAIN_ID: '226'
+system:
+  atlas:
+    listen: 127.0.0.1:50051
+  soma:
+    listen: 127.0.0.1:50091
+    robot_yaml: soma.unified-fake.yaml
+primitive:
+- name: mirrorme_bpx
+  manifest: package_manifest.unified-fake.yaml
+  config:
+    backend: fake
+    allow_motion: true
+    enable_posture_service: true
+    enable_motion_service: true
+    auto_arm_fake: false
+    robot_ip: 10.21.20.1
+    robot_state_port: 9873
+    state_rate_hz: 50
+    command_rate_hz: 50
+    sdk_tcp_local_port: 0
+    sdk_connect_timeout_s: 10.0
+    sdk_poll_period_s: 0.05
+    odom_topic: /odom
+    joint_states_topic: /joint_states
+    odom_frame: odom
+    base_frame: base_link
+    odom_rate_hz: 50.0
+    publish_odom_tf: false
+    state_timeout_s: 0.5
+    posture_stand_timeout_s: 15.0
+    posture_sit_timeout_s: 15.0
+    posture_poll_period_s: 0.2
+    posture_cleanup_sit_flush_s: 1.0
+  path: ../primitive-mirrorme-bpx-quadruped-rbnx
+service: []
+skill: []

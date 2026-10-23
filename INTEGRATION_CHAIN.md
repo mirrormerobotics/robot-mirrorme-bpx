@@ -1,5 +1,10 @@
 # BPX 接入 Robonix：当前链路与交付边界
 
+> 2026-10-23：dev.3 正式入口已统一 odom + posture + move + twist_in，
+> 同一 SDK owner，无 arm 前置约束。标准姿态 RPC 与 move 互斥；只读模式保留。
+> 见 UNIFIED_TEST_GUIDE.md。以下 dev.2 和 motion-test 身份描述属于旧部署；配套 tag 为 v0.1.0-dev.3，发布范围见 RELEASE_NOTES.md。
+
+
 更新：2026-10-21。REMAINING_TESTS.md 本轮人工验收已按操作者确认通过。
 
 ## 两个仓库
@@ -46,7 +51,7 @@ flowchart LR
 - `robonix/primitive/quadruped/move`：有界距离/角度或定时速度请求。
 - `robonix/primitive/quadruped/twist_in`：ROS 连续速度入口；人工 ros2 topic pub 可直接进入该入口。
 - 距离/角度模式依据反馈计算剩余量，不是仅以距离除以速度估算发送时长。
-- 当前旋转 move 不设平移距离门限；反转、反馈异常、时限、租期和停止保护保留。
+- 当前旋转 move 不设平移距离门限；反转、反馈异常、时限和停止保护保留。
 
 本地操作另走一条链路：
 
@@ -58,7 +63,10 @@ motion-test.sh arm/stop/status/clear-fault/release/stand/sit
 ```
 
 这些是本适配的本地操作者工具，不是 Robonix 远程标准解锁接口。
-运动租期默认 30s，从 arm 开始；move 结束 disarm；恢复连接不会自动 arm。
+2026-10-22 已移除手动 arm 前置约束和租期。ACTIVE 且反馈健康、已站立时，新请求准备 SDK；
+move 结束归零并禁用 SDK 速度，下一条请求无需 arm。故障仍须显式恢复，不重放旧指令。
+内部 ARMED/DISARMED 表示 SDK 控制准备状态，不是上层必调接口。stop/disarm 中止当前动作；
+持续禁用请调用 DEACTIVATE 或 shutdown。旧 arm 命令只作兼容入口，motion_lease_s 已无约束效果。
 release 关闭 SDK 会话，shutdown 停止外层部署。发布身份的 stand/sit 则有独立标准
 posture RPC，并非必须借助 motion-test 的本地 stand/sit。
 
@@ -78,7 +86,7 @@ flowchart LR
 ```
 
 relay 是 Windows/WSL 网络适配工具，不是所有 Linux 部署必需的 Robonix 组件。
-`acceptance.sh move` 既调用 move 又采集；`acceptance.sh observe` 只采集，均不自动 arm。
+`acceptance.sh move` 既调用 move 又采集；`acceptance.sh observe` 只采集，move 无需手动 arm；observe 不发运动请求。
 采集工具不创建第二个 SDK owner。`analyze_acceptance.py` 离线分析，不发送控制。
 
 `start-rviz.sh` 在本机打开 RViz 并启动 robot_state_publisher，用真实 JointState
@@ -90,16 +98,16 @@ Soma body exports 描述能做什么，不等同于 ROS topic 自动全部成为
 
 | 身份 | 当前能力 |
 | --- | --- |
-| 默认 dev.2 发布清单 | odom + 精确 stand/sit posture；固定远端 tag |
+| 默认 dev.3 发布清单 | odom + stand/sit posture + twist_in + move；固定远端 tag |
 | SDK 只读 | odom 与内部 ROS 状态，不开放运动 |
-| 本地 motion-test | odom + twist_in + move，仍需本地 arm，未加入默认发布能力 |
+| 本地 motion-test | odom + twist_in + move，无需本地 arm，保留的旧运动测试身份 |
 | fake/replay | 无真机 SDK 的离线验证 |
 
 本轮人工验收可结束，无需为了勾选重复动作。正式交付仍需独立处理：
 
-1. 整理并提交两个仓库的修改，审核后推送/发布新版本；默认清单的远端 tag 不会自动
-   包含本地修改。当前没有自动提交、推送或变更发布身份。
-2. 如目标是远程连续任务编排，另行确定正式运动授权机制和能力发布范围；目前每个
-   move 结束 disarm、本地 30s 租期仍限制无人值守任务。这不因验收通过自动取消。
+1. 两个仓库配套 v0.1.0-dev.3；Robot 固定引用 Primitive 同名 tag。新版本合并 master
+   后由已收录的 Catalog 索引默认清单；无需重复提交收录条目。
+2. 发布范围为统一四能力入口，免 arm 与待命反馈恢复；现场基础串接由操作者确认通过，
+   离线故障恢复通过。测试范围与材料限制见 RELEASE_NOTES.md。
 3. 归档实际外参/协方差/尺寸、机器人时基定义、完整 SDK 许可证与静态依赖资料、
    最终生产主机证据。人工接受与可复核技术材料分别记录，不用占位值冒充实测结果。

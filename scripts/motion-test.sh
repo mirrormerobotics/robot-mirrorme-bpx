@@ -3,24 +3,27 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 WORKSPACE="$(dirname "$ROOT")"
-CONTAINER=rbnx_mirrorme_bpx_quadruped
+CONTAINER="${BPX_RBNX_CONTAINER:-rbnx_mirrorme_bpx_quadruped}"
+PROVIDER="${BPX_PROVIDER_ID:-mirrorme_bpx_motion}"
 action="${1:-help}"
 (($# == 0)) || shift
 case "$action" in
   help|--help|-h)
     cat <<'EOF'
 Usage: bash scripts/motion-test.sh ACTION [options]
-  preview [--robot-ip IP]                 Render only; no robot connection
+  preview|preview-unified [--robot-ip IP]                 Render only; no robot connection
   relay ROBOT_IP WINDOWS_WIFI_IP          Start Windows UDP relay from WSL
-  start --confirm-physical-motion-test [--robot-ip IP]
+  start|start-unified --confirm-physical-motion-test [--robot-ip IP]
                                          Foreground service; no automatic stand/arm
   status | stop | clear-fault | release | shutdown
+  posture stand|sit        Standard remote posture RPC (set BPX_PROVIDER_ID=mirrorme_bpx)
+  deactivate | activate    Standard Driver RPC; never automatically sends movement
   release closes the SDK session; restart the provider before further SDK control.
   stand|sit|arm --confirm-physical-motion-test
   forward --forward-m 0.1 --duration-sec 10
   rotate --rotate-deg 15 --duration-sec 10
   velocity --linear-x 0.1 --duration-sec 1
-Movement uses the standard bounded move RPC. Each move ends disarmed.
+Movement uses the standard bounded move RPC. Each move stops; the next command needs no arm. stop cancels current motion; shutdown disables the service.
 Bounded distance/angle moves default to minimum targets 0.25 m/s / 0.25 rad/s.
 Timed velocity and Twist are not boosted. See M5_VALIDATION_2026-10-14.md.
 Start the service in one terminal; operate from another. WSL NAT still needs
@@ -39,7 +42,7 @@ EOF
     exec powershell.exe -NoProfile -ExecutionPolicy Bypass -File \
       "$(wslpath -w "$ROOT/scripts/state-relay.ps1")" -RobotIp "$1" -ListenIp "$2"
     ;;
-  preview|start)
+  preview|start|preview-unified|start-unified)
     confirm=0
     robot_ip=10.21.40.1
     while (($#)); do
@@ -49,13 +52,15 @@ EOF
         *) echo "unknown startup option: $1" >&2; exit 2 ;;
       esac
     done
-    [[ "$action" == preview || "$confirm" == 1 ]] || {
+    [[ "$action" == preview* || "$confirm" == 1 ]] || {
       echo 'start requires --confirm-physical-motion-test' >&2; exit 2;
     }
     extra=()
-    [[ "$action" != preview ]] || extra+=(--dry-run)
+    [[ "$action" != preview* ]] || extra+=(--dry-run)
+    profile=--motion-test
+    [[ "$action" != *-unified ]] || profile=--release-motion
     exec bash "$ROOT/scripts/start-sdk-read-only-docker.sh" \
-      --motion-test --confirm-physical-motion-test --robot-ip "$robot_ip" \
+      "$profile" --confirm-physical-motion-test --robot-ip "$robot_ip" \
       --sdk-wheel "$WORKSPACE/.deps/sdk/bpx_sdk_open-1.0.8-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl" \
       --robonix-source "$WORKSPACE/.deps/robonix" \
       --target-cache "$HOME/.cache/robonix-bpx/target" \
@@ -63,6 +68,10 @@ EOF
       --config-cache "$HOME/.cache/robonix-bpx/config" \
       --network-mode host --ros-domain-id 225 --keep-manifest "${extra[@]}"
     ;;
+  posture)
+    [[ $# == 1 && ( "$1" == stand || "$1" == sit ) ]] || { echo "posture requires stand or sit" >&2; exit 2; } ;;
+  deactivate|activate)
+    [[ $# == 0 ]] || exit 2 ;;
   stand|sit|arm)
     [[ $# == 1 && "$1" == --confirm-physical-motion-test ]] || {
       echo "$action requires --confirm-physical-motion-test" >&2; exit 2;
@@ -83,9 +92,16 @@ fi
   exit 2
 }
 case "$action" in
+  posture)
+    exec docker exec -w /pkg -e PYTHONPATH=/pkg:/robonix-api:/pkg/rbnx-build/codegen/proto_gen \
+      "$CONTAINER" python3 -m bpx_quadruped.posture_client "$1" --provider-id "$PROVIDER" ;;
+  deactivate|activate)
+    # Feed the helper through stdin; the provider container mounts only Primitive.
+    exec docker exec -i -w /pkg -e PYTHONPATH=/pkg:/robonix-api:/pkg/rbnx-build/codegen/proto_gen \
+      "$CONTAINER" python3 - "$PROVIDER" "$action" < "$ROOT/scripts/call_driver.py" ;;
   forward|rotate|velocity)
     exec docker exec -w /pkg -e PYTHONPATH=/pkg:/robonix-api:/pkg/rbnx-build/codegen/proto_gen \
-      "$CONTAINER" python3 -m bpx_quadruped.move_client "$@" ;;
+      "$CONTAINER" python3 -m bpx_quadruped.move_client --provider-id "$PROVIDER" "$@" ;;
   *)
     [[ "$action" != stop ]] || action=disarm
     [[ "$action" != clear-fault ]] || action=clear_fault

@@ -4,7 +4,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 if [[ "${1:-}" == --help || $# == 0 ]]; then
   echo 'Usage: bash scripts/acceptance.sh observe [--seconds 40]'
   echo '       bash scripts/acceptance.sh move --forward-m 0.2 --duration-sec 10'
-  echo 'Records one manually armed move, or passive odom only. Never auto-arms.'
+  echo 'Records one move without manual arm, or passive odom only. Observe never issues motion.'
   echo 'Evidence: .artifacts/acceptance/<unique directory>/capture.jsonl and report.json'
   exit 0
 fi

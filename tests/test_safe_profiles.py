@@ -18,7 +18,7 @@ class SafeProfilesTest(unittest.TestCase):
         self.assertIn("Hangzhou MirrorMe Technology Co., Ltd.", license_text)
         self.assertIn("License: BSD-3-Clause", readme)
 
-    def test_default_manifest_pins_the_odom_and_posture_public_primitive(self) -> None:
+    def test_default_manifest_pins_the_unified_public_primitive(self) -> None:
         manifest = yaml.safe_load(
             (ROBOT_ROOT / "robonix_manifest.yaml").read_text(encoding="utf-8")
         )
@@ -30,11 +30,12 @@ class SafeProfilesTest(unittest.TestCase):
             "https://github.com/mirrormerobotics/primitive-mirrorme-bpx-quadruped-rbnx",
             primitive["url"],
         )
-        self.assertEqual("v0.1.0-dev.2", primitive["branch"])
+        self.assertEqual("v0.1.0-dev.3", primitive["branch"])
         self.assertEqual("package_manifest.x86-docker.yaml", primitive["manifest"])
         self.assertEqual("sdk", primitive["config"]["backend"])
         self.assertIs(True, primitive["config"]["allow_motion"])
         self.assertIs(True, primitive["config"]["enable_posture_service"])
+        self.assertIs(True, primitive["config"]["enable_motion_service"])
         self.assertIs(False, primitive["config"]["publish_odom_tf"])
         self.assertEqual([], manifest["service"])
         self.assertEqual([], manifest["skill"])
@@ -48,10 +49,10 @@ class SafeProfilesTest(unittest.TestCase):
         catalog = manifest["catalog"]
 
         self.assertEqual(manifest["name"], catalog["name"])
-        self.assertEqual("0.1.0-dev.2", catalog["version"])
+        self.assertEqual("0.1.0-dev.3", catalog["version"])
         self.assertEqual("BSD-3-Clause", catalog["license"])
         self.assertIn("posture", catalog["tags"])
-        self.assertEqual(["nonkr <nonkr@hotmail.com>"], catalog["maintainers"])
+        self.assertEqual(["M1chael0919 <2956011381@qq.com>"], catalog["maintainers"])
         self.assertTrue(catalog["description"])
 
     def test_fake_profile_selects_distinct_motion_development_package(self) -> None:

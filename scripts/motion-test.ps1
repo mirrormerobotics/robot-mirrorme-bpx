@@ -17,7 +17,7 @@ if ($Action -eq 'help') {
     Write-Output @'
 motion-test.ps1 -Action preview|start|status|stand|sit|arm|stop|clear-fault|release|forward|rotate|velocity|shutdown
 start, stand, sit and arm require -ConfirmPhysicalMotion.
-Start never auto-stands or auto-arms. Each move ends disarmed; arm again explicitly.
+Start never auto-stands or auto-arms. Each move stops; the next command needs no arm. Shutdown disables the service.
 forward: -Distance 0.1 [-Duration 10] (negative = backwards)
 rotate: -Degrees 15 [-Duration 10] (negative = clockwise)
 velocity: -X 0.1 -Y 0 -Yaw 0 -Duration 1 (bounded standard move RPC)

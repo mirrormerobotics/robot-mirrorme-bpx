@@ -4,7 +4,7 @@
 
 新增 `twist_in` 连续平面速度和标准 `move` RPC，独立于已发布的 odom/stand/sit。
 `robonix_manifest.motion-test-fake.yaml` 完全离线；`robonix_manifest.chassis-test.yaml`
-才加载 SDK。两者均不会自动解锁。测试身份不得提交 Catalog。
+才加载 SDK。启动均保持静止；ACTIVE 后运动请求无需手动 arm。测试身份不得提交 Catalog。
 
 ## 离线回归
 
@@ -16,8 +16,8 @@ Windows 项目根目录运行：
 
 代理地址按本机 WSL 网关调整。报告存于 `.artifacts/offline/<时间>/report.json`。
 motion 阶段使用 fake backend，实际经过 Atlas 发现、gRPC、ROS 和容器进程，
-检查未解锁拒绝、距离/角度/定时命令、RPC deadline 取消和速度停发归零。
-核心单测另覆盖 ±360° 跨角度边界、断连/旧状态、里程计跳变/时间倒退、租期和并发。
+检查无需 arm 的连续调用、距离/角度/定时命令、RPC deadline 取消和速度停发归零。
+核心单测另覆盖 ±360° 跨角度边界、断连/旧状态、里程计跳变/时间倒退、生命周期和并发。
 
 ## WSL 快速操作（推荐）
 
@@ -48,14 +48,12 @@ bash scripts/motion-test.sh start --confirm-physical-motion-test
 ```bash
 bash scripts/motion-test.sh status
 bash scripts/motion-test.sh stand --confirm-physical-motion-test
-bash scripts/motion-test.sh arm --confirm-physical-motion-test
 bash scripts/motion-test.sh forward --forward-m 0.1 --duration-sec 10
 ```
 
-每次 move 后重新人工 arm；可选小角度测试：
+每次 move 结束会停止，下一条无需 arm；可选小角度测试：
 
 ```bash
-bash scripts/motion-test.sh arm --confirm-physical-motion-test
 bash scripts/motion-test.sh rotate --rotate-deg 15 --duration-sec 10
 ```
 
@@ -104,24 +102,21 @@ UDP，不向机器人发送控制数据。Ctrl+C 关闭，端口被占用时拒�
 ```powershell
 .\scripts\motion-test.ps1 -Action status
 .\scripts\motion-test.ps1 -Action stand -ConfirmPhysicalMotion
-.\scripts\motion-test.ps1 -Action arm -ConfirmPhysicalMotion
 .\scripts\motion-test.ps1 -Action forward -Distance 0.1 -Duration 10
 .\scripts\motion-test.ps1 -Action status
 ```
 
-确认前移测试结果后，其他可选命令（每次都先单独 arm；负距离后退、负角度顺时针）：
+确认前移测试结果后，其他可选命令（无需 arm；负距离后退、负角度顺时针）：
 
 ```powershell
-.\scripts\motion-test.ps1 -Action arm -ConfirmPhysicalMotion
 .\scripts\motion-test.ps1 -Action rotate -Degrees 15 -Duration 10
 
-.\scripts\motion-test.ps1 -Action arm -ConfirmPhysicalMotion
 .\scripts\motion-test.ps1 -Action velocity -X 0.1 -Y 0 -Yaw 0 -Duration 1
 ```
 
 `velocity` 是标准 move RPC 的定时速度模式，不是无限持续发送；这方便首次手动验收。
 单次命令完成即撤销解锁；若低速死区导致未移动/超时，先保存结果，勿盲目加速。
-初次不要直接测试整圈；后续整圈可用 `-Degrees 360 -Duration 30`，注意解锁租期也是 30s。
+初次不要直接测试整圈；后续整圈可用 `-Degrees 360 -Duration 30`，该时限从运动请求开始计算，不受本地 arm 租期限制。
 
 任何时候，可在另一个终端停止；此软件停止不能替代物理急停：
 
@@ -138,7 +133,7 @@ UDP，不向机器人发送控制数据。Ctrl+C 关闭，端口被占用时拒�
 ```
 
 `shutdown` 不自动坐下。故障原因排除后用 `-Action clear-fault` 清除锁存，再检查 status，
-需要运动时人工重新 arm。脚本没有自动动作序列，也不自动清故障。
+需要运动时发送新请求即可。脚本没有自动动作序列，也不自动清故障。
 
 ## 手动启动（Linux/WSL 终端）
 
@@ -166,13 +161,12 @@ bpx_move() {
 }
 bpx_local status
 bpx_local stand
-bpx_local arm
 bpx_move --forward-m 0.1 --duration-sec 10
 bpx_local status
 ```
 
-每个 move 结束（含失败/取消）都会归零并撤销解锁；下一次必须重新 `arm`。
-`bpx_local cancel`/`disarm` 可中止；故障恢复后先 `clear_fault`，再由操作员解锁。
+每个 move 结束（含失败/取消）都会归零并撤销解锁；下一次请求会重新准备 SDK，无需 `arm`。
+`bpx_local cancel`/`disarm` 可中止；故障恢复后先 `clear_fault`，再发送新请求；不会恢复旧指令。
 `sit` 先停止速度再请求坐下。客户端 `--timeout-s` 默认 35 秒；RPC deadline 到期
 服务端取消动作，客户端得到失败，需检查 status 和现场状态。
 
@@ -183,9 +177,9 @@ bpx_local status
 - 单次距离 ≤1m、角度 ≤360°、时长 ≤30s；距离/角度默认超时 30s，速度默认 1s。
 - x/y/yaw 硬上限 0.3m/s、0.2m/s、0.5rad/s；闭环内部最高 0.2m/s、0.4rad/s。
 - 距离容差 0.02m，角度容差 0.03rad；偏航、横移、反向及里程计跳变会中止。
-- 默认本地解锁租期 30s，不允许在已解锁状态续期；到期停止，不能靠远程消息延长。
+- 已取消本地 arm 和租期前置约束；运动请求仍受生命周期、反馈与单次时限检查。
 - `/cmd_vel` 使用 ROS `geometry_msgs/Twist`；默认 0.25s 未收命令归零。
-  停发后仍在当前租期内，可接收新命令；需要彻底禁用时使用 `disarm`。
+  停发后可接收新命令；`stop`/`disarm` 中止当前动作，彻底禁用使用 DEACTIVATE 或 shutdown。
 - move/本地姿态执行期间拒绝其他运动请求，生命周期重启不复用旧命令或解锁。
 
 这些软件阈值不是已标定的物理精度。Walk 小速度死区、里程计尺度、停止距离、固件
@@ -199,9 +193,9 @@ ack 含义仍需真机测量，不通过提高最低速度来掩盖误差。
 
 逐项记录机器人/固件/SDK/代码版本、命令、odom、日志、停止时间和视频：
 
-- [ ] stand -> 本地 arm -> 0.1m 前/后移；逐步扩大至计划范围。
+- [ ] stand -> 0.1m 前/后移；逐步扩大至计划范围。
 - [ ] 左/右小角度、±360° 原地旋转；横移和转角误差。
-- [ ] 连续速度停发、显式 cancel、RPC 超时、本地租期到期。
+- [ ] 连续速度停发、显式 cancel、RPC 超时、生命周期禁用。
 - [ ] 断网、旧状态、机器人重启、SIGTERM/SIGKILL、主机失联及多控制端抢占。
 - [ ] 故障清除和生命周期重启后不自行运动。
 - [ ] Walk 死区、停止距离、机器人 watchdog 上界和急停有效性。

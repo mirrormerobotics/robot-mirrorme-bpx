@@ -38,10 +38,10 @@ robot:
       urdf_link: hr_hip_link
       exports: []
 description:
-  summary: Simulated motion testing without hardware; explicit local arm required.
+  summary: Simulated motion testing without hardware; no manual arm required.
   can_do:
   - Expose the pinned BPX body model through Soma.
-  - Simulated motion testing without hardware; explicit local arm required.
+  - Simulated motion testing without hardware; no manual arm required.
   cannot_do:
   - Map, localize, navigate autonomously, or avoid obstacles.
   - Accept joint-level control, damping, or acrobatic gait commands.
