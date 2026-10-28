@@ -3,7 +3,7 @@ name: robonix.robot.mirrorme.bpx
 
 catalog:
   name: robonix.robot.mirrorme.bpx
-  version: 0.1.0-dev.3
+  version: 0.1.0-dev.4
   description: Dockerized MirrorMe BPX deployment with odometry, stand/sit, bounded move and velocity control.
   license: BSD-3-Clause
   tags: [robot, deploy, quadruped, mirrorme, bpx, docker, odom, posture, move, twist]
@@ -26,7 +26,7 @@ system:
 primitive:
   - name: mirrorme_bpx
     url: https://github.com/mirrormerobotics/primitive-mirrorme-bpx-quadruped-rbnx
-    branch: v0.1.0-dev.3
+    branch: v0.1.0-dev.4
     manifest: package_manifest.x86-docker.yaml
     config:
       backend: sdk

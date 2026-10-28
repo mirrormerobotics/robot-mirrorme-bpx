@@ -18,7 +18,7 @@ DOCKER_HOST_ADDRESS=""
 ROBONIX_SOURCE="/tmp/robonix_dev_next"
 EXPECTED_ROBONIX_COMMIT="f6cacfc4b402eb57c75b553d375c6cfaba11dce7"
 TOOL_IMAGE="mirrorme-bpx-rbnx-codegen:dev"
-RUNTIME_IMAGE="primitive-mirrorme-bpx-quadruped-rbnx:dev"
+RUNTIME_IMAGE="primitive-mirrorme-bpx-quadruped-rbnx:0.1.0-dev.4"
 OUTER_CONTAINER="rbnx_mirrorme_bpx_sdk"
 PRIMITIVE_CONTAINER="rbnx_mirrorme_bpx_quadruped"
 TARGET_CACHE=""
@@ -39,11 +39,11 @@ usage() {
   cat <<'EOF'
 Usage:
   bash scripts/start-sdk-read-only-docker.sh \
-    --sdk-wheel /absolute/path/to/bpx_sdk_open-1.0.8-...x86_64.whl \
+    --sdk-wheel /absolute/path/to/bpx_sdk_open-1.0.9-...x86_64.whl \
     --robot-ip 192.168.1.237 [options]
 
 Required:
-  --sdk-wheel PATH             Pinned BPX SDK v1.0.8 x86_64 wheel
+  --sdk-wheel PATH             Pinned BPX SDK x86_64 wheel (development baseline 1.0.9)
   --robot-ip IPV4              Reachable BPX IPv4 address
 
 Options:

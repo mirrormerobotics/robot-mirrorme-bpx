@@ -2,6 +2,7 @@
 param(
     [ValidateSet('help','preview','start','status','stand','sit','arm','stop','clear-fault','release','forward','rotate','velocity','shutdown')]
     [string]$Action = 'help',
+    [string]$SdkWheel = '', # Optional WSL/Linux wheel path
     [string]$RobotIp = '10.21.40.1',
     [string]$Distribution = 'Ubuntu-20.04',
     [double]$Distance = 0.1,
@@ -45,9 +46,10 @@ if ($Action -in @('preview','start')) {
     $userDir = & wsl.exe -d $Distribution --exec printenv HOME
     if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve WSL home' }
     $cache = ([string]$userDir).Trim() + '/.cache/robonix-bpx'
+    if (-not $SdkWheel) { $SdkWheel = "$linuxRoot/.deps/sdk/bpx_sdk_open-1.0.9-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl" }
     $command = @('bash',"$linuxRoot/robot-mirrorme-bpx/scripts/start-sdk-read-only-docker.sh",
         '--motion-test','--confirm-physical-motion-test','--robot-ip',$RobotIp,
-        '--sdk-wheel',"$linuxRoot/.deps/sdk/bpx_sdk_open-1.0.8-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl",
+        '--sdk-wheel',$SdkWheel,
         '--robonix-source',"$linuxRoot/.deps/robonix",'--target-cache',"$cache/target",
         '--cargo-cache',"$cache/cargo",'--config-cache',"$cache/config",'--network-mode','host',
         '--ros-domain-id','225','--keep-manifest')

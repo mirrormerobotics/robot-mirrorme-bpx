@@ -11,9 +11,9 @@ case "$action" in
   help|--help|-h)
     cat <<'EOF'
 Usage: bash scripts/motion-test.sh ACTION [options]
-  preview|preview-unified [--robot-ip IP]                 Render only; no robot connection
+  preview|preview-unified [--robot-ip IP] [--sdk-wheel PATH]                 Render only; no robot connection
   relay ROBOT_IP WINDOWS_WIFI_IP          Start Windows UDP relay from WSL
-  start|start-unified --confirm-physical-motion-test [--robot-ip IP]
+  start|start-unified --confirm-physical-motion-test [--robot-ip IP] [--sdk-wheel PATH]
                                          Foreground service; no automatic stand/arm
   status | stop | clear-fault | release | shutdown
   posture stand|sit        Standard remote posture RPC (set BPX_PROVIDER_ID=mirrorme_bpx)
@@ -45,9 +45,11 @@ EOF
   preview|start|preview-unified|start-unified)
     confirm=0
     robot_ip=10.21.40.1
+    sdk_wheel="${BPX_SDK_WHEEL:-$WORKSPACE/.deps/sdk/bpx_sdk_open-1.0.9-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl}"
     while (($#)); do
       case "$1" in
         --confirm-physical-motion-test) confirm=1; shift ;;
+        --sdk-wheel) [[ $# -ge 2 ]] || { echo "missing SDK wheel" >&2; exit 2; }; sdk_wheel="$2"; shift 2 ;;
         --robot-ip) [[ $# -ge 2 ]] || { echo 'missing robot IP' >&2; exit 2; }; robot_ip="$2"; shift 2 ;;
         *) echo "unknown startup option: $1" >&2; exit 2 ;;
       esac
@@ -61,7 +63,7 @@ EOF
     [[ "$action" != *-unified ]] || profile=--release-motion
     exec bash "$ROOT/scripts/start-sdk-read-only-docker.sh" \
       "$profile" --confirm-physical-motion-test --robot-ip "$robot_ip" \
-      --sdk-wheel "$WORKSPACE/.deps/sdk/bpx_sdk_open-1.0.8-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl" \
+      --sdk-wheel "$sdk_wheel" \
       --robonix-source "$WORKSPACE/.deps/robonix" \
       --target-cache "$HOME/.cache/robonix-bpx/target" \
       --cargo-cache "$HOME/.cache/robonix-bpx/cargo" \

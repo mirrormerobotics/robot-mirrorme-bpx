@@ -30,7 +30,7 @@ class SafeProfilesTest(unittest.TestCase):
             "https://github.com/mirrormerobotics/primitive-mirrorme-bpx-quadruped-rbnx",
             primitive["url"],
         )
-        self.assertEqual("v0.1.0-dev.3", primitive["branch"])
+        self.assertEqual("v0.1.0-dev.4", primitive["branch"])
         self.assertEqual("package_manifest.x86-docker.yaml", primitive["manifest"])
         self.assertEqual("sdk", primitive["config"]["backend"])
         self.assertIs(True, primitive["config"]["allow_motion"])
@@ -49,7 +49,7 @@ class SafeProfilesTest(unittest.TestCase):
         catalog = manifest["catalog"]
 
         self.assertEqual(manifest["name"], catalog["name"])
-        self.assertEqual("0.1.0-dev.3", catalog["version"])
+        self.assertEqual("0.1.0-dev.4", catalog["version"])
         self.assertEqual("BSD-3-Clause", catalog["license"])
         self.assertIn("posture", catalog["tags"])
         self.assertEqual(["M1chael0919 <2956011381@qq.com>"], catalog["maintainers"])

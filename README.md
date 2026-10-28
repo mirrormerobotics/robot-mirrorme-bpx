@@ -1,8 +1,8 @@
 # MirrorMe BPX Robonix Robot Deployment
 
-当前统一入口为 **0.1.0-dev.3**：一个 SDK 会话提供 odom、posture、move、twist_in，
+当前统一入口为 **0.1.0-dev.4**：一个 SDK 会话提供 odom、posture、move、twist_in，
 无需 arm。启动、标准 RPC 验证和故障恢复步骤见 [UNIFIED_TEST_GUIDE.md](UNIFIED_TEST_GUIDE.md)。
-默认远端清单固定引用 Primitive v0.1.0-dev.3；`start-unified` 用于相邻本地源码部署。
+默认远端清单固定引用 Primitive v0.1.0-dev.4；`start-unified` 用于相邻本地源码部署。
 版本范围及验收记录见 [RELEASE_NOTES.md](RELEASE_NOTES.md)。
 下文 dev.2/`--release-posture` 的操作保留为旧姿态专用模式；不代表新版能力范围。
 
@@ -20,7 +20,7 @@ complete fake/replay Docker workflow.
 
 ## 开发分支接手说明
 
-当前两个仓库使用 `master` 或配套 `v0.1.0-dev.3` tag。请将
+当前两个仓库使用 `master` 或配套 `v0.1.0-dev.4` tag。请将
 `primitive-mirrorme-bpx-quadruped-rbnx` 和 `robot-mirrorme-bpx` 放在相邻目录，
 并同时检出配套版本。分支包含脚本命令行配置、分阶段 Odom 只读采集与离线比较，
 以及默认 TF 容器名、缓存路径和同版本 SDK wheel 替换的修复。
@@ -29,7 +29,7 @@ complete fake/replay Docker workflow.
 固定版本的 Robonix 工具、SDK wheel 和运行镜像。在 Robot 仓库运行
 `python3 -m unittest discover -s tests -v`，准备完成后按下文进行 Docker 集成验证。
 开发分支的完整真机部署使用 `scripts/start-sdk-read-only-docker.sh`，它引用相邻
-Primitive 仓库的本地源码；默认 `robonix_manifest.yaml` 使用 `v0.1.0-dev.3`。
+Primitive 仓库的本地源码；默认 `robonix_manifest.yaml` 使用 `v0.1.0-dev.4`。
 
 本次修复通过本地单元测试和隔离的命令行为验证。接手后需要复验真实 Docker
 集成，并按 [HARDWARE_TEST_GUIDE.md 第 15 节](HARDWARE_TEST_GUIDE.md#15-世界坐标原点sdk-重连与整机重启验收)
@@ -40,12 +40,12 @@ Primitive 仓库的本地源码；默认 `robonix_manifest.yaml` 使用 `v0.1.0-
 
 `robonix_manifest.yaml` is the pre-release Catalog/default deployment. It
 starts Atlas + Soma and fetches the unified odom/posture/move/twist Primitive from
-immutable tag `v0.1.0-dev.3`. The external BPX SDK wheel and reachable hardware are required
+immutable tag `v0.1.0-dev.4`. The external BPX SDK wheel and reachable hardware are required
 for activation. Startup stays idle; explicit posture, move and Twist requests
 control the robot, without a manual arm prerequisite.
 
 The default manifest contains the complete pre-release Catalog metadata under
-`catalog:` (`robonix.robot.mirrorme.bpx`, version `0.1.0-dev.3`,
+`catalog:` (`robonix.robot.mirrorme.bpx`, version `0.1.0-dev.4`,
 BSD-3-Clause, and the public maintainer contact). Its dependency uses the public
 MirrorMe repository plus the matching pre-release tag; local-path profiles are
 retained only for development and replay validation.
@@ -161,12 +161,12 @@ creates `twist_in`, gait, damping, joint control, or autonomous navigation.
 
 The SDK wheel remains an external host artifact. Download the fixed CPython
 3.10 Linux x86_64 artifact from the
-[`v1.0.8` release](https://github.com/mirrormerobotics/bpx_sdk_open/releases/tag/v1.0.8),
+[`v1.0.9` release](https://github.com/mirrormerobotics/bpx_sdk_open/releases/tag/v1.0.9),
 verify its published SHA-256, and supply it by absolute path before booting:
 
 ```bash
 bash scripts/start-sdk-read-only-docker.sh \
-  --sdk-wheel /absolute/path/to/bpx_sdk_open-1.0.8-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl \
+  --sdk-wheel /absolute/path/to/bpx_sdk_open-1.0.9-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl \
   --robot-ip 192.168.1.237 --release-posture \
   --confirm-physical-posture-service
 ```
@@ -178,7 +178,7 @@ selected; only the wheel and robot IP are required:
 
 ```bash
 bash scripts/start-sdk-read-only-docker.sh \
-  --sdk-wheel /absolute/path/to/bpx_sdk_open-1.0.8-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl \
+  --sdk-wheel /absolute/path/to/bpx_sdk_open-1.0.9-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl \
   --robot-ip 192.168.1.237
 ```
 
@@ -271,3 +271,8 @@ BPX SDK is licensed under Apache-2.0.
 Continuous velocity and bounded standard `move` are available in separate,
 lifecycle-gated test profiles (no manual arm required). See [MOTION_TEST_GUIDE.md](MOTION_TEST_GUIDE.md)
 for offline regression, operator commands, limits and pending hardware checks.
+
+## SDK 1.0.9 compatibility
+
+Version dev.4 supports SDK 1.0.9 with 1.0.8 fallback. See [SDK_TEST_GUIDE.md](SDK_TEST_GUIDE.md).
+Prereleases 1.0.10/1.0.11 are not enabled in this release.
